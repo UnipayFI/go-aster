@@ -13,11 +13,11 @@ import (
 
 // Endpoints
 var (
-	BaseWsMainUrl          = "wss://fstream.binance.com/ws"
+	BaseWsMainUrl          = "wss://fstream.asterdex.com/ws"
 	BaseWsTestnetUrl       = "wss://stream.binancefuture.com/ws"
-	BaseCombinedMainURL    = "wss://fstream.binance.com/stream?streams="
+	BaseCombinedMainURL    = "wss://fstream.asterdex.com/stream?streams="
 	BaseCombinedTestnetURL = "wss://stream.binancefuture.com/stream?streams="
-	BaseWsApiMainURL       = "wss://ws-fapi.binance.com/ws-fapi/v1"
+	BaseWsApiMainURL       = "wss://ws-fapi.asterdex.com/ws-fapi/v1"
 	BaseWsApiTestnetURL    = "wss://testnet.binancefuture.com/ws-fapi/v1"
 )
 
