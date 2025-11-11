@@ -125,7 +125,7 @@ type FuturesAlgoOrderStatusType string
 
 // Endpoints
 var (
-	BaseAPIMainURL    = "https://api.binance.com"
+	BaseAPIMainURL    = "https://api.asterdex.com"
 	BaseAPITestnetURL = "https://testnet.binance.vision"
 )
 

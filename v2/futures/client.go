@@ -78,7 +78,7 @@ type SelfTradePreventionMode string
 
 // Endpoints
 var (
-	BaseApiMainUrl    = "https://fapi.binance.com"
+	BaseApiMainUrl    = "https://fapi.asterdex.com"
 	BaseApiTestnetUrl = "https://testnet.binancefuture.com"
 )
 
