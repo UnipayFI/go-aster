@@ -1,0 +1,10 @@
+.idea
+.vscode
+*.exe
+dist/
+*.log
+.env
+**/.env
+bin/*
+*.*.env
+test/*
