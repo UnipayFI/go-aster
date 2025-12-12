@@ -10,14 +10,14 @@ import (
 )
 
 type CreateOrderService struct {
-	client *SpotClient
+	c *SpotClient
 
 	params map[string]string
 }
 
-func NewCreateOrderService(client *SpotClient, symbol string, side OrderSide, orderType OrderType) *CreateOrderService {
+func (c *SpotClient) NewCreateOrderService(symbol string, side OrderSide, orderType OrderType) *CreateOrderService {
 	return &CreateOrderService{
-		client: client,
+		c:      c,
 		params: map[string]string{"symbol": symbol, "side": string(side), "type": string(orderType)},
 	}
 }
@@ -53,7 +53,7 @@ func (s *CreateOrderService) SetStopPrice(stopPrice float64) *CreateOrderService
 }
 
 func (s *CreateOrderService) Do(ctx context.Context) (*CreateOrderResponse, error) {
-	req := request.Post(s.client, ctx, "/api/v3/order", s.params).Sign()
+	req := request.Post(s.c, ctx, "/api/v1/order", s.params).Sign()
 	return request.Do[CreateOrderResponse](req)
 }
 

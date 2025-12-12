@@ -9,15 +9,15 @@ import (
 )
 
 type PingService struct {
-	client *SpotClient
+	c *SpotClient
 }
 
-func NewPingService(client *SpotClient) *PingService {
-	return &PingService{client: client}
+func (c *SpotClient) NewPingService() *PingService {
+	return &PingService{c: c}
 }
 
 func (s *PingService) Ping(ctx context.Context) error {
-	req := request.Get(ctx, s.client, "/api/v1/ping")
+	req := request.Get(ctx, s.c, "/api/v1/ping")
 	_, err := request.Do[json.RawMessage](req)
 	if err != nil {
 		return err
@@ -26,15 +26,15 @@ func (s *PingService) Ping(ctx context.Context) error {
 }
 
 type TimeService struct {
-	client *SpotClient
+	c *SpotClient
 }
 
-func NewTimeService(client *SpotClient) *TimeService {
-	return &TimeService{client: client}
+func (c *SpotClient) NewTimeService() *TimeService {
+	return &TimeService{c: c}
 }
 
 func (s *TimeService) GetTime(ctx context.Context) (*TimeResponse, error) {
-	req := request.Get(ctx, s.client, "/api/v1/time")
+	req := request.Get(ctx, s.c, "/api/v1/time")
 	return request.Do[TimeResponse](req)
 }
 
@@ -43,15 +43,15 @@ type TimeResponse struct {
 }
 
 type ExchangeInfoService struct {
-	client *SpotClient
+	c *SpotClient
 }
 
-func NewExchangeInfoService(client *SpotClient) *ExchangeInfoService {
-	return &ExchangeInfoService{client: client}
+func (c *SpotClient) NewExchangeInfoService() *ExchangeInfoService {
+	return &ExchangeInfoService{c: c}
 }
 
 func (s *ExchangeInfoService) GetExchangeInfo(ctx context.Context) (*ExchangeInfoResponse, error) {
-	req := request.Get(ctx, s.client, "/api/v1/exchangeInfo")
+	req := request.Get(ctx, s.c, "/api/v1/exchangeInfo")
 	return request.Do[ExchangeInfoResponse](req)
 }
 

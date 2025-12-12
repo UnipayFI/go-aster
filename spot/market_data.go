@@ -10,13 +10,13 @@ import (
 )
 
 type DepthService struct {
-	client *SpotClient
+	c *SpotClient
 
 	params map[string]string
 }
 
-func NewDepthService(client *SpotClient, symbol string) *DepthService {
-	return &DepthService{client: client, params: map[string]string{"symbol": symbol}}
+func (c *SpotClient) NewDepthService(symbol string) *DepthService {
+	return &DepthService{c: c, params: map[string]string{"symbol": symbol}}
 }
 
 func (s *DepthService) SetLimit(limit int) *DepthService {
@@ -30,7 +30,7 @@ func (s *DepthService) SetSymbolStatus(symbolStatus string) *DepthService {
 }
 
 func (s *DepthService) Do(ctx context.Context) (*DepthResponse, error) {
-	req := request.Get(ctx, s.client, "/api/v1/depth", s.params)
+	req := request.Get(ctx, s.c, "/api/v1/depth", s.params)
 	return request.Do[DepthResponse](req)
 }
 
@@ -41,13 +41,13 @@ type DepthResponse struct {
 }
 
 type GetTradesService struct {
-	client *SpotClient
+	c *SpotClient
 
 	params map[string]string
 }
 
-func NewGetTradesService(client *SpotClient, symbol string) *GetTradesService {
-	return &GetTradesService{client: client, params: map[string]string{"symbol": symbol}}
+func (c *SpotClient) NewGetTradesService(symbol string) *GetTradesService {
+	return &GetTradesService{c: c, params: map[string]string{"symbol": symbol}}
 }
 
 func (s *GetTradesService) SetLimit(limit int) *GetTradesService {
@@ -56,7 +56,7 @@ func (s *GetTradesService) SetLimit(limit int) *GetTradesService {
 }
 
 func (s *GetTradesService) Do(ctx context.Context) ([]TradeResponse, error) {
-	req := request.Get(ctx, s.client, "/api/v1/trades", s.params)
+	req := request.Get(ctx, s.c, "/api/v1/trades", s.params)
 	trades, err := request.Do[[]TradeResponse](req)
 	if err != nil {
 		return nil, err

@@ -36,9 +36,9 @@ func Get(ctx context.Context, client Client, url string, params ...map[string]st
 	return &Request{client: client, r: r}
 }
 
-func Post(client Client, ctx context.Context, url string, body any) *Request {
+func Post(client Client, ctx context.Context, url string, body map[string]string) *Request {
 	r := new(ctx, client, http.MethodPost, url)
-	r.SetBody(body)
+	r.SetFormData(body)
 	return &Request{client: client, r: r}
 }
 
@@ -68,7 +68,7 @@ func (r *Request) Sign() *Request {
 	if r.r.Method == http.MethodGet {
 		r.r.SetQueryParam("signature", signature)
 	} else {
-		r.r.Body.(map[string]any)["signature"] = signature
+		r.r.FormData.Set("signature", signature)
 	}
 	return r
 }
@@ -82,10 +82,8 @@ func (r *Request) setBaseParams() {
 		r.r.SetQueryParam("recvWindow", fmt.Sprintf("%d", r.client.GetRecvWindow()))
 		r.r.SetQueryParam("timestamp", fmt.Sprintf("%d", time.Now().UnixMilli()))
 	case http.MethodPost:
-		body := r.r.Body.(map[string]any)
-		body["recvWindow"] = fmt.Sprintf("%d", r.client.GetRecvWindow())
-		body["timestamp"] = fmt.Sprintf("%d", time.Now().UnixMilli())
-		r.r.Body = body
+		r.r.FormData.Set("recvWindow", fmt.Sprintf("%d", r.client.GetRecvWindow()))
+		r.r.FormData.Set("timestamp", fmt.Sprintf("%d", time.Now().UnixMilli()))
 	}
 }
 
@@ -95,11 +93,7 @@ func (r *Request) payload() (payload string, err error) {
 		payload = r.r.QueryParam.Encode()
 		return payload, nil
 	case http.MethodPost:
-		body, err := r.client.GetHttpClient().JSONMarshal(r.r.Body)
-		if err != nil {
-			return "", err
-		}
-		payload = string(body)
+		payload = r.r.FormData.Encode()
 		return payload, nil
 	default:
 		return "", fmt.Errorf("invalid method: %s", r.r.Method)
