@@ -31,7 +31,7 @@ func Do[T any](r *Request) (resp *T, err error) {
 	// TODO response header handler
 	if response.IsError() {
 		// TODO: handler error
-		return nil, fmt.Errorf("status code: %d", response.StatusCode())
+		return nil, fmt.Errorf("status code: %d, body: %s", response.StatusCode(), response.String())
 	}
 	return resp, nil
 }

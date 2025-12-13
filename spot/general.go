@@ -91,3 +91,20 @@ type Symbol struct {
 	TimeInForce        []TimeInForce    `json:"timeInForce"`
 	OcoAllowed         bool             `json:"ocoAllowed"`
 }
+
+type GetServerTimeService struct {
+	c *SpotClient
+}
+
+func (c *SpotClient) NewGetServerTimeService() *GetServerTimeService {
+	return &GetServerTimeService{c: c}
+}
+
+func (s *GetServerTimeService) Do(ctx context.Context) (*ServerTimeResponse, error) {
+	req := request.Get(ctx, s.c, "/api/v1/time", map[string]string{})
+	return request.Do[ServerTimeResponse](req)
+}
+
+type ServerTimeResponse struct {
+	ServerTime int64 `json:"serverTime"`
+}

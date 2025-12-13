@@ -12,12 +12,13 @@ const (
 )
 
 type Option struct {
-	apiKey     string
-	secretKey  string
-	recvWindow int64
-	logger     log.Logger
-	signFn     SignFn
-	client     *resty.Client
+	apiKey       string
+	secretKey    string
+	recvWindow   int64
+	logger       log.Logger
+	signFn       SignFn
+	client       *resty.Client
+	timeOffsetMs int64
 }
 
 type Options func(*Option)

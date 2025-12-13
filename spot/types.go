@@ -38,3 +38,10 @@ const (
 	OrderStatusRejected        OrderStatus = "REJECTED"
 	OrderStatusExpired         OrderStatus = "EXPIRED"
 )
+
+type TransferType string
+
+const (
+	TransferFutureToSpot TransferType = "FUTURE_SPOT"
+	TransferSpotToFuture TransferType = "SPOT_FUTURE"
+)
