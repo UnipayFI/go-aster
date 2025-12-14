@@ -207,13 +207,13 @@ func (s *GetAllOrdersService) SetOrderId(orderId int64) *GetAllOrdersService {
 	return s
 }
 
-func (s *GetAllOrdersService) SetStartTime(startTime int64) *GetAllOrdersService {
-	s.params["startTime"] = strconv.FormatInt(startTime, 10)
+func (s *GetAllOrdersService) SetStartTime(startTime time.Time) *GetAllOrdersService {
+	s.params["startTime"] = strconv.FormatInt(startTime.UnixMilli(), 10)
 	return s
 }
 
-func (s *GetAllOrdersService) SetEndTime(endTime int64) *GetAllOrdersService {
-	s.params["endTime"] = strconv.FormatInt(endTime, 10)
+func (s *GetAllOrdersService) SetEndTime(endTime time.Time) *GetAllOrdersService {
+	s.params["endTime"] = strconv.FormatInt(endTime.UnixMilli(), 10)
 	return s
 }
 

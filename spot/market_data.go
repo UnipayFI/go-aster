@@ -2,6 +2,8 @@ package spot
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -21,11 +23,6 @@ func (c *SpotClient) NewDepthService(symbol string) *DepthService {
 
 func (s *DepthService) SetLimit(limit int) *DepthService {
 	s.params["limit"] = strconv.Itoa(limit)
-	return s
-}
-
-func (s *DepthService) SetSymbolStatus(symbolStatus string) *DepthService {
-	s.params["symbolStatus"] = symbolStatus
 	return s
 }
 
@@ -117,13 +114,13 @@ func (s *AggTradesService) SetFromId(fromId int64) *AggTradesService {
 	return s
 }
 
-func (s *AggTradesService) SetStartTime(startTime int64) *AggTradesService {
-	s.params["startTime"] = strconv.FormatInt(startTime, 10)
+func (s *AggTradesService) SetStartTime(startTime time.Time) *AggTradesService {
+	s.params["startTime"] = strconv.FormatInt(startTime.UnixMilli(), 10)
 	return s
 }
 
-func (s *AggTradesService) SetEndTime(endTime int64) *AggTradesService {
-	s.params["endTime"] = strconv.FormatInt(endTime, 10)
+func (s *AggTradesService) SetEndTime(endTime time.Time) *AggTradesService {
+	s.params["endTime"] = strconv.FormatInt(endTime.UnixMilli(), 10)
 	return s
 }
 
@@ -161,13 +158,13 @@ func (c *SpotClient) NewKlinesService(symbol string, interval KlineInterval) *Kl
 	return &KlinesService{c: c, params: map[string]string{"symbol": symbol, "interval": string(interval)}}
 }
 
-func (s *KlinesService) SetStartTime(startTime int64) *KlinesService {
-	s.params["startTime"] = strconv.FormatInt(startTime, 10)
+func (s *KlinesService) SetStartTime(startTime time.Time) *KlinesService {
+	s.params["startTime"] = strconv.FormatInt(startTime.UnixMilli(), 10)
 	return s
 }
 
-func (s *KlinesService) SetEndTime(endTime int64) *KlinesService {
-	s.params["endTime"] = strconv.FormatInt(endTime, 10)
+func (s *KlinesService) SetEndTime(endTime time.Time) *KlinesService {
+	s.params["endTime"] = strconv.FormatInt(endTime.UnixMilli(), 10)
 	return s
 }
 
@@ -185,30 +182,106 @@ func (s *KlinesService) Do(ctx context.Context) ([]Kline, error) {
 	return *klines, nil
 }
 
-type Kline = []any
+type Kline struct {
+	OpenTime                 time.Time       `json:"openTime,format:unixmilli"`
+	Open                     decimal.Decimal `json:"open"`
+	High                     decimal.Decimal `json:"high"`
+	Low                      decimal.Decimal `json:"low"`
+	Close                    decimal.Decimal `json:"close"`
+	Volume                   decimal.Decimal `json:"volume"`
+	CloseTime                time.Time       `json:"closeTime,format:unixmilli"`
+	QuoteAssetVolume         decimal.Decimal `json:"quoteAssetVolume"`
+	TradeNum                 int64           `json:"tradeNum"`
+	TakerBuyBaseAssetVolume  decimal.Decimal `json:"takerBuyBaseAssetVolume"`
+	TakerBuyQuoteAssetVolume decimal.Decimal `json:"takerBuyQuoteAssetVolume"`
+}
+
+func (k *Kline) UnmarshalJSON(data []byte) error {
+	var arr []json.RawMessage
+	if err := json.Unmarshal(data, &arr); err != nil {
+		return fmt.Errorf("failed to unmarshal as array: %w", err)
+	}
+	if len(arr) < 11 {
+		return fmt.Errorf("expected array length >= 11, got %d", len(arr))
+	}
+	// 1. OpenTime
+	var opentime int64
+	if err := json.Unmarshal(arr[0], &opentime); err == nil {
+		k.OpenTime = time.Unix(opentime/1000, (opentime%1000)*int64(time.Millisecond))
+	} else {
+		return fmt.Errorf("failed to unmarshal open time: %w", err)
+	}
+
+	// 2. Open
+	if err := json.Unmarshal(arr[1], &k.Open); err != nil {
+		return fmt.Errorf("failed to unmarshal open: %w", err)
+	}
+
+	// 3. High
+	if err := json.Unmarshal(arr[2], &k.High); err != nil {
+		return fmt.Errorf("failed to unmarshal high: %w", err)
+	}
+
+	// 4. Low
+	if err := json.Unmarshal(arr[3], &k.Low); err != nil {
+		return fmt.Errorf("failed to unmarshal low: %w", err)
+	}
+
+	// 5. Close
+	if err := json.Unmarshal(arr[4], &k.Close); err != nil {
+		return fmt.Errorf("failed to unmarshal close: %w", err)
+	}
+
+	// 6. Volume
+	if err := json.Unmarshal(arr[5], &k.Volume); err != nil {
+		return fmt.Errorf("failed to unmarshal volume: %w", err)
+	}
+
+	// 7. CloseTime (Unix毫秒时间戳)
+	var closeTime int64
+	if err := json.Unmarshal(arr[6], &closeTime); err == nil {
+		k.CloseTime = time.Unix(closeTime/1000, (closeTime%1000)*int64(time.Millisecond))
+	} else {
+		return fmt.Errorf("failed to unmarshal close time: %w", err)
+	}
+
+	// 8. QuoteAssetVolume
+	if err := json.Unmarshal(arr[7], &k.QuoteAssetVolume); err != nil {
+		return fmt.Errorf("failed to unmarshal quote asset volume: %w", err)
+	}
+
+	// 9. TradeNum
+	if err := json.Unmarshal(arr[8], &k.TradeNum); err != nil {
+		return fmt.Errorf("failed to unmarshal trade num: %w", err)
+	}
+
+	// 10. TakerBuyBaseAssetVolume
+	if err := json.Unmarshal(arr[9], &k.TakerBuyBaseAssetVolume); err != nil {
+		return fmt.Errorf("failed to unmarshal taker buy base asset volume: %w", err)
+	}
+
+	// 11. TakerBuyQuoteAssetVolume
+	if err := json.Unmarshal(arr[10], &k.TakerBuyQuoteAssetVolume); err != nil {
+		return fmt.Errorf("failed to unmarshal taker buy quote asset volume: %w", err)
+	}
+	return nil
+}
 
 type Ticker24hrService struct {
 	c *SpotClient
-
-	params map[string]string
 }
 
 func (c *SpotClient) NewTicker24hrService() *Ticker24hrService {
-	return &Ticker24hrService{c: c, params: map[string]string{}}
+	return &Ticker24hrService{c: c}
 }
 
-func (s *Ticker24hrService) SetSymbol(symbol string) *Ticker24hrService {
-	s.params["symbol"] = symbol
-	return s
-}
-
-func (s *Ticker24hrService) Do(ctx context.Context) (*Ticker24hrResponse, error) {
-	req := request.Get(ctx, s.c, "/api/v1/ticker/24hr", s.params)
+func (s *Ticker24hrService) Do(ctx context.Context, symbol string) (*Ticker24hrResponse, error) {
+	req := request.Get(ctx, s.c, "/api/v1/ticker/24hr", map[string]string{"symbol": symbol})
 	return request.Do[Ticker24hrResponse](req)
 }
 
 func (s *Ticker24hrService) DoAll(ctx context.Context) ([]Ticker24hrResponse, error) {
-	req := request.Get(ctx, s.c, "/api/v1/ticker/24hr", s.params)
+	req := request.Get(ctx, s.c, "/api/v1/ticker/24hr")
 	tickers, err := request.Do[[]Ticker24hrResponse](req)
 	if err != nil {
 		return nil, err
@@ -233,8 +306,8 @@ type Ticker24hrResponse struct {
 	LowPrice           decimal.Decimal `json:"lowPrice"`
 	Volume             decimal.Decimal `json:"volume"`
 	QuoteVolume        decimal.Decimal `json:"quoteVolume"`
-	OpenTime           int64           `json:"openTime"`
-	CloseTime          int64           `json:"closeTime"`
+	OpenTime           time.Time       `json:"openTime,format:unixmilli"`
+	CloseTime          time.Time       `json:"closeTime,format:unixmilli"`
 	FirstId            int64           `json:"firstId"`
 	LastId             int64           `json:"lastId"`
 	Count              int64           `json:"count"`
@@ -274,31 +347,24 @@ func (s *TickerPriceService) DoAll(ctx context.Context) ([]TickerPriceResponse, 
 type TickerPriceResponse struct {
 	Symbol string          `json:"symbol"`
 	Price  decimal.Decimal `json:"price"`
-	Time   int64           `json:"time"`
+	Time   time.Time       `json:"time,format:unixmilli"`
 }
 
 type BookTickerService struct {
 	c *SpotClient
-
-	params map[string]string
 }
 
 func (c *SpotClient) NewBookTickerService() *BookTickerService {
-	return &BookTickerService{c: c, params: map[string]string{}}
+	return &BookTickerService{c: c}
 }
 
-func (s *BookTickerService) SetSymbol(symbol string) *BookTickerService {
-	s.params["symbol"] = symbol
-	return s
-}
-
-func (s *BookTickerService) Do(ctx context.Context) (*BookTickerResponse, error) {
-	req := request.Get(ctx, s.c, "/api/v1/ticker/bookTicker", s.params)
+func (s *BookTickerService) Do(ctx context.Context, symbol string) (*BookTickerResponse, error) {
+	req := request.Get(ctx, s.c, "/api/v1/ticker/bookTicker", map[string]string{"symbol": symbol})
 	return request.Do[BookTickerResponse](req)
 }
 
 func (s *BookTickerService) DoAll(ctx context.Context) ([]BookTickerResponse, error) {
-	req := request.Get(ctx, s.c, "/api/v1/ticker/bookTicker", s.params)
+	req := request.Get(ctx, s.c, "/api/v1/ticker/bookTicker")
 	tickers, err := request.Do[[]BookTickerResponse](req)
 	if err != nil {
 		return nil, err
@@ -312,7 +378,7 @@ type BookTickerResponse struct {
 	BidQty   decimal.Decimal `json:"bidQty"`
 	AskPrice decimal.Decimal `json:"askPrice"`
 	AskQty   decimal.Decimal `json:"askQty"`
-	Time     int64           `json:"time"`
+	Time     time.Time       `json:"time,format:unixmilli"`
 }
 
 type CommissionRateService struct {

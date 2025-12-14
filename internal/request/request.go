@@ -37,9 +37,11 @@ func Get(ctx context.Context, client Client, url string, params ...map[string]st
 	return &Request{client: client, r: r}
 }
 
-func Post(client Client, ctx context.Context, url string, body map[string]string) *Request {
+func Post(client Client, ctx context.Context, url string, body ...map[string]string) *Request {
 	r := new(ctx, client, http.MethodPost, url)
-	r.SetFormData(body)
+	for _, b := range body {
+		r.SetFormData(b)
+	}
 	return &Request{client: client, r: r}
 }
 

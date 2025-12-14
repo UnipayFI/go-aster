@@ -30,7 +30,7 @@ type AccountResponse struct {
 	CanDeposit   bool             `json:"canDeposit"`
 	CanWithdraw  bool             `json:"canWithdraw"`
 	CanBurnAsset bool             `json:"canBurnAsset"`
-	UpdateTime   int64            `json:"updateTime"`
+	UpdateTime   time.Time        `json:"updateTime,format:unixmilli"`
 	Balances     []AccountBalance `json:"balances"`
 }
 
@@ -60,13 +60,13 @@ func (s *GetUserTradesService) SetOrderId(orderId int64) *GetUserTradesService {
 	return s
 }
 
-func (s *GetUserTradesService) SetStartTime(startTime int64) *GetUserTradesService {
-	s.params["startTime"] = strconv.FormatInt(startTime, 10)
+func (s *GetUserTradesService) SetStartTime(startTime time.Time) *GetUserTradesService {
+	s.params["startTime"] = strconv.FormatInt(startTime.UnixMilli(), 10)
 	return s
 }
 
-func (s *GetUserTradesService) SetEndTime(endTime int64) *GetUserTradesService {
-	s.params["endTime"] = strconv.FormatInt(endTime, 10)
+func (s *GetUserTradesService) SetEndTime(endTime time.Time) *GetUserTradesService {
+	s.params["endTime"] = strconv.FormatInt(endTime.UnixMilli(), 10)
 	return s
 }
 
@@ -111,11 +111,11 @@ type WalletTransferService struct {
 	params map[string]string
 }
 
-func (c *SpotClient) NewWalletTransferService(amount string, asset string, clientTranId string, kindType TransferType) *WalletTransferService {
+func (c *SpotClient) NewWalletTransferService(amount float64, asset string, clientTranId string, kindType TransferType) *WalletTransferService {
 	return &WalletTransferService{
 		c: c,
 		params: map[string]string{
-			"amount":       amount,
+			"amount":       strconv.FormatFloat(amount, 'f', -1, 64),
 			"asset":        asset,
 			"clientTranId": clientTranId,
 			"kindType":     string(kindType),
@@ -291,7 +291,7 @@ func (c *SpotClient) NewCreateListenKeyService() *CreateListenKeyService {
 }
 
 func (s *CreateListenKeyService) Do(ctx context.Context) (*ListenKeyResponse, error) {
-	req := request.Post(s.c, ctx, "/api/v1/listenKey", map[string]string{}).SetApiKeyHeader()
+	req := request.Post(s.c, ctx, "/api/v1/listenKey").SetApiKeyHeader()
 	return request.Do[ListenKeyResponse](req)
 }
 
