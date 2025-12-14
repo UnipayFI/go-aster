@@ -32,9 +32,11 @@ func (s *DepthService) Do(ctx context.Context) (*DepthResponse, error) {
 }
 
 type DepthResponse struct {
-	LastUpdateId int64                `json:"lastUpdateId"`
-	Bids         [][2]decimal.Decimal `json:"bids"`
-	Asks         [][2]decimal.Decimal `json:"asks"`
+	LastUpdateId    int64                `json:"lastUpdateId"`
+	EventTime       time.Time            `json:"E,format:unixmilli"`
+	TransactionTime time.Time            `json:"T,format:unixmilli"`
+	Bids            [][2]decimal.Decimal `json:"bids"`
+	Asks            [][2]decimal.Decimal `json:"asks"`
 }
 
 type GetTradesService struct {
@@ -144,7 +146,7 @@ type AggTradeResponse struct {
 	Quantity     decimal.Decimal `json:"q"`
 	FirstTradeId int64           `json:"f"`
 	LastTradeId  int64           `json:"l"`
-	Timestamp    int64           `json:"T"`
+	Timestamp    time.Time       `json:"T,format:unixmilli"`
 	IsBuyerMaker bool            `json:"m"`
 }
 

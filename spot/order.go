@@ -62,7 +62,6 @@ type OrderResponse struct {
 	Symbol        string          `json:"symbol"`
 	OrderId       int64           `json:"orderId"`
 	ClientOrderId string          `json:"clientOrderId"`
-	UpdateTime    time.Time       `json:"updateTime,format:unixmilli"`
 	Price         decimal.Decimal `json:"price"`
 	AvgPrice      decimal.Decimal `json:"avgPrice"`
 	OrigQty       decimal.Decimal `json:"origQty"`
@@ -75,6 +74,8 @@ type OrderResponse struct {
 	OrigType      OrderType       `json:"origType"`
 	Type          OrderType       `json:"type"`
 	Side          OrderSide       `json:"side"`
+	Time          time.Time       `json:"time,format:unixmilli"`
+	UpdateTime    time.Time       `json:"updateTime,format:unixmilli"`
 }
 
 type CancelOrderService struct {
@@ -181,13 +182,14 @@ func (s *CancelAllOpenOrdersService) SetOrigClientOrderIdList(origClientOrderIds
 	return s
 }
 
-func (s *CancelAllOpenOrdersService) Do(ctx context.Context) ([]OrderResponse, error) {
+func (s *CancelAllOpenOrdersService) Do(ctx context.Context) (*CancelAllOpenOrdersResponse, error) {
 	req := request.Delete(ctx, s.c, "/api/v1/allOpenOrders", s.params).Sign()
-	orders, err := request.Do[[]OrderResponse](req)
-	if err != nil {
-		return nil, err
-	}
-	return *orders, nil
+	return request.Do[CancelAllOpenOrdersResponse](req)
+}
+
+type CancelAllOpenOrdersResponse struct {
+	Code int    `json:"code"`
+	Msg  string `json:"msg"`
 }
 
 type GetAllOrdersService struct {

@@ -139,11 +139,11 @@ type SendToAddressService struct {
 	params map[string]string
 }
 
-func (c *SpotClient) NewSendToAddressService(amount string, asset string, toAddress string) *SendToAddressService {
+func (c *SpotClient) NewSendToAddressService(amount float64, asset string, toAddress string) *SendToAddressService {
 	return &SendToAddressService{
 		c: c,
 		params: map[string]string{
-			"amount":    amount,
+			"amount":    strconv.FormatFloat(amount, 'f', -1, 64),
 			"asset":     asset,
 			"toAddress": toAddress,
 		},
