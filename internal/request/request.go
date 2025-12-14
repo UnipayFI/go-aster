@@ -20,6 +20,7 @@ type Client interface {
 	GetSecretKey() string
 	GetLogger() log.Logger
 	GetSignFn() func(apiKey, secretKey string, payload string) (string, error)
+	GetTimeOffsetMs() int64
 }
 
 type Request struct {
@@ -36,10 +37,33 @@ func Get(ctx context.Context, client Client, url string, params ...map[string]st
 	return &Request{client: client, r: r}
 }
 
-func Post(client Client, ctx context.Context, url string, body map[string]string) *Request {
+func Post(client Client, ctx context.Context, url string, body ...map[string]string) *Request {
 	r := new(ctx, client, http.MethodPost, url)
-	r.SetFormData(body)
+	for _, b := range body {
+		r.SetFormData(b)
+	}
 	return &Request{client: client, r: r}
+}
+
+func Put(ctx context.Context, client Client, url string, params ...map[string]string) *Request {
+	r := new(ctx, client, http.MethodPut, url)
+	for _, param := range params {
+		r.SetQueryParams(param)
+	}
+	return &Request{client: client, r: r}
+}
+
+func Delete(ctx context.Context, client Client, url string, params ...map[string]string) *Request {
+	r := new(ctx, client, http.MethodDelete, url)
+	for _, param := range params {
+		r.SetQueryParams(param)
+	}
+	return &Request{client: client, r: r}
+}
+
+func (r *Request) SetApiKeyHeader() *Request {
+	r.r.SetHeader("X-MBX-APIKEY", r.client.GetApiKey())
+	return r
 }
 
 func (r *Request) Sign() *Request {
@@ -65,7 +89,7 @@ func (r *Request) Sign() *Request {
 	}
 
 	// 4. set signature
-	if r.r.Method == http.MethodGet {
+	if r.r.Method == http.MethodGet || r.r.Method == http.MethodPut || r.r.Method == http.MethodDelete {
 		r.r.SetQueryParam("signature", signature)
 	} else {
 		r.r.FormData.Set("signature", signature)
@@ -74,22 +98,24 @@ func (r *Request) Sign() *Request {
 }
 
 func (r *Request) setBaseParams() {
-	r.r.SetHeader("Content-Type", "application/x-www-form-urlencoded")
 	r.r.SetHeader("X-MBX-APIKEY", r.client.GetApiKey())
 
+	timestamp := time.Now().UnixMilli() - r.client.GetTimeOffsetMs()
+
 	switch r.r.Method {
-	case http.MethodGet:
+	case http.MethodGet, http.MethodPut, http.MethodDelete:
 		r.r.SetQueryParam("recvWindow", fmt.Sprintf("%d", r.client.GetRecvWindow()))
-		r.r.SetQueryParam("timestamp", fmt.Sprintf("%d", time.Now().UnixMilli()))
+		r.r.SetQueryParam("timestamp", fmt.Sprintf("%d", timestamp))
 	case http.MethodPost:
+		r.r.SetHeader("Content-Type", "application/x-www-form-urlencoded")
 		r.r.FormData.Set("recvWindow", fmt.Sprintf("%d", r.client.GetRecvWindow()))
-		r.r.FormData.Set("timestamp", fmt.Sprintf("%d", time.Now().UnixMilli()))
+		r.r.FormData.Set("timestamp", fmt.Sprintf("%d", timestamp))
 	}
 }
 
 func (r *Request) payload() (payload string, err error) {
 	switch r.r.Method {
-	case http.MethodGet:
+	case http.MethodGet, http.MethodPut, http.MethodDelete:
 		payload = r.r.QueryParam.Encode()
 		return payload, nil
 	case http.MethodPost:
