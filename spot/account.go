@@ -101,6 +101,7 @@ type UserTradeResponse struct {
 	CommissionAsset string          `json:"commissionAsset"`
 	Time            time.Time       `json:"time,format:unixmilli"`
 	CounterpartyId  int64           `json:"counterpartyId"`
+	CreateUpdateId  *int64          `json:"createUpdateId"`
 	Maker           bool            `json:"maker"`
 	Buyer           bool            `json:"buyer"`
 }

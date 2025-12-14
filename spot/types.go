@@ -14,11 +14,10 @@ const (
 type TimeInForce string
 
 const (
-	TimeInForceTypeGTC    TimeInForce = "GTC"    // Good Till Cancel
-	TimeInForceTypeIOC    TimeInForce = "IOC"    // Immediate or Cancel
-	TimeInForceTypeFOK    TimeInForce = "FOK"    // Fill or Kill
-	TimeInForceTypeGTX    TimeInForce = "GTX"    // Good Till Crossing (Post Only)
-	TimeInForceTypeHIDDEN TimeInForce = "HIDDEN" // Hidden Order (Post Only)
+	TimeInForceTypeGTC TimeInForce = "GTC" // Good Till Cancel
+	TimeInForceTypeIOC TimeInForce = "IOC" // Immediate or Cancel
+	TimeInForceTypeFOK TimeInForce = "FOK" // Fill or Kill
+	TimeInForceTypeGTX TimeInForce = "GTX" // Good Till Crossing (Post Only)
 )
 
 type OrderSide string

@@ -67,3 +67,9 @@ func WithTimeOffset(timeOffsetMs int64) Options {
 		opt.timeOffsetMs = timeOffsetMs
 	}
 }
+
+func WithBaseURL(baseURL string) Options {
+	return func(opt *Option) {
+		opt.client.SetBaseURL(baseURL)
+	}
+}
