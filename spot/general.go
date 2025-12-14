@@ -106,5 +106,5 @@ func (s *GetServerTimeService) Do(ctx context.Context) (*ServerTimeResponse, err
 }
 
 type ServerTimeResponse struct {
-	ServerTime int64 `json:"serverTime"`
+	ServerTime time.Time `json:"serverTime,format:unixmilli"`
 }

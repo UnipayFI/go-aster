@@ -1,4 +1,4 @@
-package spot
+package client
 
 import (
 	"github.com/UnipayFI/go-aster/common"
@@ -59,5 +59,11 @@ func WithAuth(apiKey, secretKey string) Options {
 func WithSignRequestFn(signFn SignFn) Options {
 	return func(opt *Option) {
 		opt.signFn = signFn
+	}
+}
+
+func WithTimeOffset(timeOffsetMs int64) Options {
+	return func(opt *Option) {
+		opt.timeOffsetMs = timeOffsetMs
 	}
 }
