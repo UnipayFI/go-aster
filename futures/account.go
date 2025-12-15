@@ -156,7 +156,7 @@ type PositionRiskResponse struct {
 	MarkPrice        decimal.Decimal `json:"markPrice"`
 	UnRealizedProfit decimal.Decimal `json:"unRealizedProfit"`
 	LiquidationPrice decimal.Decimal `json:"liquidationPrice"`
-	Leverage         string          `json:"leverage"`
+	Leverage         int             `json:"leverage,string"`
 	MaxNotionalValue decimal.Decimal `json:"maxNotionalValue"`
 	MarginType       MarginType      `json:"marginType"`
 	IsolatedMargin   decimal.Decimal `json:"isolatedMargin"`
@@ -286,7 +286,7 @@ type AccountPosition struct {
 	UnrealizedProfit       decimal.Decimal `json:"unrealizedProfit"`
 	PositionInitialMargin  decimal.Decimal `json:"positionInitialMargin"`
 	OpenOrderInitialMargin decimal.Decimal `json:"openOrderInitialMargin"`
-	Leverage               string          `json:"leverage"`
+	Leverage               int             `json:"leverage,string"`
 	Isolated               bool            `json:"isolated"`
 	EntryPrice             decimal.Decimal `json:"entryPrice"`
 	MaxNotional            decimal.Decimal `json:"maxNotional"`
@@ -481,8 +481,11 @@ type ForceOrderResponse struct {
 	TimeInForce   TimeInForce     `json:"timeInForce"`
 	Type          OrderType       `json:"type"`
 	ReduceOnly    bool            `json:"reduceOnly"`
+	ClosePosition bool            `json:"closePosition"`
 	Side          OrderSide       `json:"side"`
 	PositionSide  PositionSide    `json:"positionSide"`
+	StopPrice     decimal.Decimal `json:"stopPrice"`
+	WorkingType   WorkingType     `json:"workingType"`
 	OrigType      OrderType       `json:"origType"`
 	Time          time.Time       `json:"time,format:unixmilli"`
 	UpdateTime    time.Time       `json:"updateTime,format:unixmilli"`
@@ -634,37 +637,29 @@ type ListenKeyResponse struct {
 }
 
 type ExtendListenKeyService struct {
-	c      *FuturesClient
-	params map[string]string
+	c *FuturesClient
 }
 
-func (c *FuturesClient) NewExtendListenKeyService(listenKey string) *ExtendListenKeyService {
-	return &ExtendListenKeyService{
-		c:      c,
-		params: map[string]string{"listenKey": listenKey},
-	}
+func (c *FuturesClient) NewExtendListenKeyService() *ExtendListenKeyService {
+	return &ExtendListenKeyService{c: c}
 }
 
 func (s *ExtendListenKeyService) Do(ctx context.Context) error {
-	req := request.Put(ctx, s.c, "/fapi/v1/listenKey", s.params).SetApiKeyHeader()
+	req := request.Put(ctx, s.c, "/fapi/v1/listenKey").SetApiKeyHeader()
 	_, err := request.Do[struct{}](req)
 	return err
 }
 
 type CloseListenKeyService struct {
-	c      *FuturesClient
-	params map[string]string
+	c *FuturesClient
 }
 
-func (c *FuturesClient) NewCloseListenKeyService(listenKey string) *CloseListenKeyService {
-	return &CloseListenKeyService{
-		c:      c,
-		params: map[string]string{"listenKey": listenKey},
-	}
+func (c *FuturesClient) NewCloseListenKeyService() *CloseListenKeyService {
+	return &CloseListenKeyService{c: c}
 }
 
 func (s *CloseListenKeyService) Do(ctx context.Context) error {
-	req := request.Delete(ctx, s.c, "/fapi/v1/listenKey", s.params).SetApiKeyHeader()
+	req := request.Delete(ctx, s.c, "/fapi/v1/listenKey").SetApiKeyHeader()
 	_, err := request.Do[struct{}](req)
 	return err
 }
