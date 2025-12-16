@@ -40,3 +40,12 @@ func (c *FuturesClient) SyncServerTime(ctx context.Context) error {
 
 	return nil
 }
+
+type FuturesWebSocketClient struct {
+	*client.WebSocketClient
+}
+
+func NewFuturesWebSocketClient(options ...client.Options) *FuturesWebSocketClient {
+	opts := append([]client.Options{client.WithBaseURL(common.DEFAULT_FUTURES_WEBSOCKET_BASE_URL)}, options...)
+	return &FuturesWebSocketClient{client.NewWebSocketClient(opts...)}
+}

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/UnipayFI/go-aster/client"
+	"github.com/UnipayFI/go-aster/common"
 )
 
 type SpotClient struct {
@@ -12,9 +13,11 @@ type SpotClient struct {
 }
 
 func NewSpotClient(options ...client.Options) *SpotClient {
-	return &SpotClient{
-		client.NewClient(options...),
-	}
+	options = append(
+		[]client.Options{client.WithBaseURL(common.DEFAULT_SPOT_BASE_URL)},
+		options...,
+	)
+	return &SpotClient{client.NewClient(options...)}
 }
 
 // SyncServerTime synchronizes with server time and calculates offset
@@ -35,4 +38,16 @@ func (c *SpotClient) SyncServerTime(ctx context.Context) error {
 		localTime, serverTime.ServerTime.UnixMilli(), c.GetTimeOffsetMs())
 
 	return nil
+}
+
+type SpotWebSocketClient struct {
+	*client.WebSocketClient
+}
+
+func NewSpotWebSocketClient(options ...client.Options) *SpotWebSocketClient {
+	options = append(
+		[]client.Options{client.WithBaseURL(common.DEFAULT_SPOT_WEBSOCKET_BASE_URL)},
+		options...,
+	)
+	return &SpotWebSocketClient{client.NewWebSocketClient(options...)}
 }

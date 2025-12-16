@@ -1,7 +1,6 @@
 package client
 
 import (
-	"github.com/UnipayFI/go-aster/common"
 	"github.com/UnipayFI/go-aster/pkg/log"
 	"github.com/go-json-experiment/json"
 	"github.com/go-resty/resty/v2"
@@ -33,13 +32,18 @@ func defaultOption() *Option {
 
 func defaultHttpClient() *resty.Client {
 	return resty.New().
-		SetBaseURL(common.DEFAULT_SPOT_BASE_URL).
 		SetJSONMarshaler(func(v any) ([]byte, error) {
 			return json.Marshal(v)
 		}).
 		SetJSONUnmarshaler(func(data []byte, v any) error {
 			return json.Unmarshal(data, v)
 		})
+}
+
+func WithBaseURL(baseURL string) Options {
+	return func(opt *Option) {
+		opt.client.SetBaseURL(baseURL)
+	}
 }
 
 func WithLogger(logger log.Logger) Options {
@@ -65,11 +69,5 @@ func WithSignRequestFn(signFn SignFn) Options {
 func WithTimeOffset(timeOffsetMs int64) Options {
 	return func(opt *Option) {
 		opt.timeOffsetMs = timeOffsetMs
-	}
-}
-
-func WithBaseURL(baseURL string) Options {
-	return func(opt *Option) {
-		opt.client.SetBaseURL(baseURL)
 	}
 }
