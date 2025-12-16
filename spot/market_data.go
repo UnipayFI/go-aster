@@ -394,7 +394,7 @@ func (c *SpotClient) NewCommissionRateService(symbol string) *CommissionRateServ
 }
 
 func (s *CommissionRateService) Do(ctx context.Context) (*CommissionRateResponse, error) {
-	req := request.Get(ctx, s.c, "/api/v1/commissionRate", s.params).Sign()
+	req := request.Get(ctx, s.c, "/api/v1/commissionRate", s.params)
 	return request.Do[CommissionRateResponse](req)
 }
 
