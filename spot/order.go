@@ -54,7 +54,7 @@ func (s *CreateOrderService) SetStopPrice(stopPrice float64) *CreateOrderService
 }
 
 func (s *CreateOrderService) Do(ctx context.Context) (*OrderResponse, error) {
-	req := request.Post(s.c, ctx, "/api/v1/order", s.params).Sign()
+	req := request.Post(s.c, ctx, "/api/v1/order", s.params).WithSignature()
 	return request.Do[OrderResponse](req)
 }
 
@@ -101,7 +101,7 @@ func (s *CancelOrderService) SetOrigClientOrderId(origClientOrderId string) *Can
 }
 
 func (s *CancelOrderService) Do(ctx context.Context) (*OrderResponse, error) {
-	req := request.Delete(ctx, s.c, "/api/v1/order", s.params).Sign()
+	req := request.Delete(ctx, s.c, "/api/v1/order", s.params).WithSignature()
 	return request.Do[OrderResponse](req)
 }
 
@@ -128,7 +128,7 @@ func (s *GetOrderService) SetOrigClientOrderId(origClientOrderId string) *GetOrd
 }
 
 func (s *GetOrderService) Do(ctx context.Context) (*OrderResponse, error) {
-	req := request.Get(ctx, s.c, "/api/v1/order", s.params).Sign()
+	req := request.Get(ctx, s.c, "/api/v1/order", s.params).WithSignature()
 	return request.Do[OrderResponse](req)
 }
 
@@ -150,7 +150,7 @@ func (s *GetOpenOrdersService) SetSymbol(symbol string) *GetOpenOrdersService {
 }
 
 func (s *GetOpenOrdersService) Do(ctx context.Context) ([]OrderResponse, error) {
-	req := request.Get(ctx, s.c, "/api/v1/openOrders", s.params).Sign()
+	req := request.Get(ctx, s.c, "/api/v1/openOrders", s.params).WithSignature()
 	orders, err := request.Do[[]OrderResponse](req)
 	if err != nil {
 		return nil, err
@@ -183,7 +183,7 @@ func (s *CancelAllOpenOrdersService) SetOrigClientOrderIdList(origClientOrderIds
 }
 
 func (s *CancelAllOpenOrdersService) Do(ctx context.Context) (*CancelAllOpenOrdersResponse, error) {
-	req := request.Delete(ctx, s.c, "/api/v1/allOpenOrders", s.params).Sign()
+	req := request.Delete(ctx, s.c, "/api/v1/allOpenOrders", s.params).WithSignature()
 	return request.Do[CancelAllOpenOrdersResponse](req)
 }
 
@@ -225,7 +225,7 @@ func (s *GetAllOrdersService) SetLimit(limit int) *GetAllOrdersService {
 }
 
 func (s *GetAllOrdersService) Do(ctx context.Context) ([]OrderResponse, error) {
-	req := request.Get(ctx, s.c, "/api/v1/allOrders", s.params).Sign()
+	req := request.Get(ctx, s.c, "/api/v1/allOrders", s.params).WithSignature()
 	orders, err := request.Do[[]OrderResponse](req)
 	if err != nil {
 		return nil, err

@@ -2,7 +2,6 @@ package spot
 
 import (
 	"context"
-	"encoding/json"
 	"time"
 
 	"github.com/UnipayFI/go-aster/internal/request"
@@ -18,11 +17,8 @@ func (c *SpotClient) NewPingService() *PingService {
 
 func (s *PingService) Ping(ctx context.Context) error {
 	req := request.Get(ctx, s.c, "/api/v1/ping")
-	_, err := request.Do[json.RawMessage](req)
-	if err != nil {
-		return err
-	}
-	return nil
+	_, err := request.Do[struct{}](req)
+	return err
 }
 
 type TimeService struct {

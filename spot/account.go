@@ -20,7 +20,7 @@ func (c *SpotClient) NewGetAccountService() *GetAccountService {
 }
 
 func (s *GetAccountService) Do(ctx context.Context) (*AccountResponse, error) {
-	req := request.Get(ctx, s.c, "/api/v1/account", s.params).Sign()
+	req := request.Get(ctx, s.c, "/api/v1/account", s.params).WithSignature()
 	return request.Do[AccountResponse](req)
 }
 
@@ -30,7 +30,7 @@ type AccountResponse struct {
 	CanDeposit   bool             `json:"canDeposit"`
 	CanWithdraw  bool             `json:"canWithdraw"`
 	CanBurnAsset bool             `json:"canBurnAsset"`
-	UpdateTime   time.Time        `json:"updateTime,format:unixmilli"`
+	UpdateTime   time.Time        `json:"updateTime,format:unixnano"`
 	Balances     []AccountBalance `json:"balances"`
 }
 
@@ -81,7 +81,7 @@ func (s *GetUserTradesService) SetLimit(limit int) *GetUserTradesService {
 }
 
 func (s *GetUserTradesService) Do(ctx context.Context) ([]UserTradeResponse, error) {
-	req := request.Get(ctx, s.c, "/api/v1/userTrades", s.params).Sign()
+	req := request.Get(ctx, s.c, "/api/v1/userTrades", s.params).WithSignature()
 	trades, err := request.Do[[]UserTradeResponse](req)
 	if err != nil {
 		return nil, err
@@ -101,6 +101,7 @@ type UserTradeResponse struct {
 	CommissionAsset string          `json:"commissionAsset"`
 	Time            time.Time       `json:"time,format:unixmilli"`
 	CounterpartyId  int64           `json:"counterpartyId"`
+	CreateUpdateId  *int64          `json:"createUpdateId"`
 	Maker           bool            `json:"maker"`
 	Buyer           bool            `json:"buyer"`
 }
@@ -124,7 +125,7 @@ func (c *SpotClient) NewWalletTransferService(amount float64, asset string, clie
 }
 
 func (s *WalletTransferService) Do(ctx context.Context) (*TransferResponse, error) {
-	req := request.Post(s.c, ctx, "/api/v1/asset/wallet/transfer", s.params).Sign()
+	req := request.Post(s.c, ctx, "/api/v1/asset/wallet/transfer", s.params).WithSignature()
 	return request.Do[TransferResponse](req)
 }
 
@@ -156,7 +157,7 @@ func (s *SendToAddressService) SetClientTranId(clientTranId string) *SendToAddre
 }
 
 func (s *SendToAddressService) Do(ctx context.Context) (*TransferResponse, error) {
-	req := request.Post(s.c, ctx, "/api/v1/asset/sendToAddress", s.params).Sign()
+	req := request.Post(s.c, ctx, "/api/v1/asset/sendToAddress", s.params).WithSignature()
 	return request.Do[TransferResponse](req)
 }
 
@@ -209,7 +210,7 @@ func (c *SpotClient) NewWithdrawService(chainId string, asset string, amount str
 }
 
 func (s *WithdrawService) Do(ctx context.Context) (*WithdrawResponse, error) {
-	req := request.Post(s.c, ctx, "/api/v1/aster/user-withdraw", s.params).Sign()
+	req := request.Post(s.c, ctx, "/api/v1/aster/user-withdraw", s.params).WithSignature()
 	return request.Do[WithdrawResponse](req)
 }
 
@@ -291,7 +292,7 @@ func (c *SpotClient) NewCreateListenKeyService() *CreateListenKeyService {
 }
 
 func (s *CreateListenKeyService) Do(ctx context.Context) (*ListenKeyResponse, error) {
-	req := request.Post(s.c, ctx, "/api/v1/listenKey").SetApiKeyHeader()
+	req := request.Post(s.c, ctx, "/api/v1/listenKey").WithApiKey()
 	return request.Do[ListenKeyResponse](req)
 }
 
@@ -313,7 +314,7 @@ func (c *SpotClient) NewExtendListenKeyService(listenKey string) *ExtendListenKe
 }
 
 func (s *ExtendListenKeyService) Do(ctx context.Context) error {
-	req := request.Put(ctx, s.c, "/api/v1/listenKey", s.params).SetApiKeyHeader()
+	req := request.Put(ctx, s.c, "/api/v1/listenKey", s.params).WithApiKey()
 	_, err := request.Do[struct{}](req)
 	return err
 }
@@ -332,7 +333,7 @@ func (c *SpotClient) NewCloseListenKeyService(listenKey string) *CloseListenKeyS
 }
 
 func (s *CloseListenKeyService) Do(ctx context.Context) error {
-	req := request.Delete(ctx, s.c, "/api/v1/listenKey", s.params).SetApiKeyHeader()
+	req := request.Delete(ctx, s.c, "/api/v1/listenKey", s.params).WithApiKey()
 	_, err := request.Do[struct{}](req)
 	return err
 }
