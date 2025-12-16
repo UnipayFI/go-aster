@@ -23,8 +23,7 @@ func (c *FuturesClient) NewChangePositionModeService(dualSidePosition bool) *Cha
 
 func (s *ChangePositionModeService) Do(ctx context.Context) error {
 	req := request.Post(s.c, ctx, "/fapi/v1/positionSide/dual", s.params).Sign()
-	_, err := request.Do[struct{}](req)
-	return err
+	return handlerGeneralResponse(request.Do[GeneralResponse](req))
 }
 
 type GetPositionModeService struct {
@@ -35,13 +34,15 @@ func (c *FuturesClient) NewGetPositionModeService() *GetPositionModeService {
 	return &GetPositionModeService{c: c}
 }
 
-func (s *GetPositionModeService) Do(ctx context.Context) (*PositionModeResponse, error) {
+func (s *GetPositionModeService) Do(ctx context.Context) (dualSidePosition bool, err error) {
 	req := request.Get(ctx, s.c, "/fapi/v1/positionSide/dual").Sign()
-	return request.Do[PositionModeResponse](req)
-}
-
-type PositionModeResponse struct {
-	DualSidePosition bool `json:"dualSidePosition"`
+	resp, err := request.Do[struct {
+		DualSidePosition bool `json:"dualSidePosition"`
+	}](req)
+	if err != nil {
+		return false, err
+	}
+	return resp.DualSidePosition, nil
 }
 
 type ChangeMultiAssetsModeService struct {
@@ -58,8 +59,7 @@ func (c *FuturesClient) NewChangeMultiAssetsModeService(multiAssetsMargin bool) 
 
 func (s *ChangeMultiAssetsModeService) Do(ctx context.Context) error {
 	req := request.Post(s.c, ctx, "/fapi/v1/multiAssetsMargin", s.params).Sign()
-	_, err := request.Do[struct{}](req)
-	return err
+	return handlerGeneralResponse(request.Do[GeneralResponse](req))
 }
 
 type GetMultiAssetsModeService struct {
@@ -70,13 +70,15 @@ func (c *FuturesClient) NewGetMultiAssetsModeService() *GetMultiAssetsModeServic
 	return &GetMultiAssetsModeService{c: c}
 }
 
-func (s *GetMultiAssetsModeService) Do(ctx context.Context) (*MultiAssetsModeResponse, error) {
+func (s *GetMultiAssetsModeService) Do(ctx context.Context) (multiAssetsMargin bool, err error) {
 	req := request.Get(ctx, s.c, "/fapi/v1/multiAssetsMargin").Sign()
-	return request.Do[MultiAssetsModeResponse](req)
-}
-
-type MultiAssetsModeResponse struct {
-	MultiAssetsMargin bool `json:"multiAssetsMargin"`
+	resp, err := request.Do[struct {
+		MultiAssetsMargin bool `json:"multiAssetsMargin"`
+	}](req)
+	if err != nil {
+		return false, err
+	}
+	return resp.MultiAssetsMargin, nil
 }
 
 type ChangeLeverageService struct {
@@ -122,8 +124,7 @@ func (c *FuturesClient) NewChangeMarginTypeService(symbol string, marginType Mar
 
 func (s *ChangeMarginTypeService) Do(ctx context.Context) error {
 	req := request.Post(s.c, ctx, "/fapi/v1/marginType", s.params).Sign()
-	_, err := request.Do[struct{}](req)
-	return err
+	return handlerGeneralResponse(request.Do[GeneralResponse](req))
 }
 
 type GetPositionRiskService struct {
@@ -539,21 +540,15 @@ type PositionMarginHistoryResponse struct {
 }
 
 type GetLeverageBracketService struct {
-	c      *FuturesClient
-	params map[string]string
+	c *FuturesClient
 }
 
 func (c *FuturesClient) NewGetLeverageBracketService() *GetLeverageBracketService {
-	return &GetLeverageBracketService{c: c, params: map[string]string{}}
-}
-
-func (s *GetLeverageBracketService) SetSymbol(symbol string) *GetLeverageBracketService {
-	s.params["symbol"] = symbol
-	return s
+	return &GetLeverageBracketService{c: c}
 }
 
 func (s *GetLeverageBracketService) DoAll(ctx context.Context) ([]LeverageBracketResponse, error) {
-	req := request.Get(ctx, s.c, "/fapi/v1/leverageBracket", s.params).Sign()
+	req := request.Get(ctx, s.c, "/fapi/v1/leverageBracket").Sign()
 	resp, err := request.Do[[]LeverageBracketResponse](req)
 	if err != nil {
 		return nil, err
@@ -561,8 +556,8 @@ func (s *GetLeverageBracketService) DoAll(ctx context.Context) ([]LeverageBracke
 	return *resp, nil
 }
 
-func (s *GetLeverageBracketService) Do(ctx context.Context) ([]LeverageBracketResponse, error) {
-	req := request.Get(ctx, s.c, "/fapi/v1/leverageBracket", s.params).Sign()
+func (s *GetLeverageBracketService) Do(ctx context.Context, symbol string) ([]LeverageBracketResponse, error) {
+	req := request.Get(ctx, s.c, "/fapi/v1/leverageBracket", map[string]string{"symbol": symbol}).Sign()
 	resp, err := request.Do[[]LeverageBracketResponse](req)
 	if err != nil {
 		return nil, err
@@ -628,7 +623,7 @@ func (c *FuturesClient) NewCreateListenKeyService() *CreateListenKeyService {
 }
 
 func (s *CreateListenKeyService) Do(ctx context.Context) (*ListenKeyResponse, error) {
-	req := request.Post(s.c, ctx, "/fapi/v1/listenKey").SetApiKeyHeader()
+	req := request.Post(s.c, ctx, "/fapi/v1/listenKey").Sign()
 	return request.Do[ListenKeyResponse](req)
 }
 
@@ -645,7 +640,7 @@ func (c *FuturesClient) NewExtendListenKeyService() *ExtendListenKeyService {
 }
 
 func (s *ExtendListenKeyService) Do(ctx context.Context) error {
-	req := request.Put(ctx, s.c, "/fapi/v1/listenKey").SetApiKeyHeader()
+	req := request.Put(ctx, s.c, "/fapi/v1/listenKey").Sign()
 	_, err := request.Do[struct{}](req)
 	return err
 }
@@ -659,7 +654,7 @@ func (c *FuturesClient) NewCloseListenKeyService() *CloseListenKeyService {
 }
 
 func (s *CloseListenKeyService) Do(ctx context.Context) error {
-	req := request.Delete(ctx, s.c, "/fapi/v1/listenKey").SetApiKeyHeader()
+	req := request.Delete(ctx, s.c, "/fapi/v1/listenKey").Sign()
 	_, err := request.Do[struct{}](req)
 	return err
 }

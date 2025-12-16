@@ -1,6 +1,10 @@
 package futures
 
-import "github.com/shopspring/decimal"
+import (
+	"fmt"
+
+	"github.com/shopspring/decimal"
+)
 
 type PositionSide string
 
@@ -136,4 +140,19 @@ const (
 type DepthLevel struct {
 	Price    decimal.Decimal
 	Quantity decimal.Decimal
+}
+
+type GeneralResponse struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+}
+
+func handlerGeneralResponse(resp *GeneralResponse, err error) error {
+	if err != nil {
+		return err
+	}
+	if resp.Code != 200 {
+		return fmt.Errorf("%s failed: %d %v", resp.Message, resp.Code, resp.Message)
+	}
+	return nil
 }

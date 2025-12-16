@@ -61,11 +61,6 @@ func Delete(ctx context.Context, client Client, url string, params ...map[string
 	return &Request{client: client, r: r}
 }
 
-func (r *Request) SetApiKeyHeader() *Request {
-	r.r.SetHeader("X-MBX-APIKEY", r.client.GetApiKey())
-	return r
-}
-
 func (r *Request) Sign() *Request {
 	// 1. set recvWindow and timestamp
 	r.setBaseParams()

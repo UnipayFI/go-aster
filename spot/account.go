@@ -292,7 +292,7 @@ func (c *SpotClient) NewCreateListenKeyService() *CreateListenKeyService {
 }
 
 func (s *CreateListenKeyService) Do(ctx context.Context) (*ListenKeyResponse, error) {
-	req := request.Post(s.c, ctx, "/api/v1/listenKey").SetApiKeyHeader()
+	req := request.Post(s.c, ctx, "/api/v1/listenKey").Sign()
 	return request.Do[ListenKeyResponse](req)
 }
 
@@ -314,7 +314,7 @@ func (c *SpotClient) NewExtendListenKeyService(listenKey string) *ExtendListenKe
 }
 
 func (s *ExtendListenKeyService) Do(ctx context.Context) error {
-	req := request.Put(ctx, s.c, "/api/v1/listenKey", s.params).SetApiKeyHeader()
+	req := request.Put(ctx, s.c, "/api/v1/listenKey", s.params).Sign()
 	_, err := request.Do[struct{}](req)
 	return err
 }
@@ -333,7 +333,7 @@ func (c *SpotClient) NewCloseListenKeyService(listenKey string) *CloseListenKeyS
 }
 
 func (s *CloseListenKeyService) Do(ctx context.Context) error {
-	req := request.Delete(ctx, s.c, "/api/v1/listenKey", s.params).SetApiKeyHeader()
+	req := request.Delete(ctx, s.c, "/api/v1/listenKey", s.params).Sign()
 	_, err := request.Do[struct{}](req)
 	return err
 }

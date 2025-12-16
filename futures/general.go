@@ -2,7 +2,6 @@ package futures
 
 import (
 	"context"
-	"encoding/json"
 	"time"
 
 	"github.com/UnipayFI/go-aster/internal/request"
@@ -19,7 +18,7 @@ func (c *FuturesClient) NewPingService() *PingService {
 
 func (s *PingService) Ping(ctx context.Context) error {
 	req := request.Get(ctx, s.c, "/fapi/v1/ping")
-	_, err := request.Do[json.RawMessage](req)
+	_, err := request.Do[struct{}](req)
 	return err
 }
 

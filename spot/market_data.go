@@ -93,7 +93,7 @@ func (s *HistoricalTradesService) SetFromId(fromId int64) *HistoricalTradesServi
 }
 
 func (s *HistoricalTradesService) Do(ctx context.Context) ([]TradeResponse, error) {
-	req := request.Get(ctx, s.c, "/api/v1/historicalTrades", s.params).SetApiKeyHeader()
+	req := request.Get(ctx, s.c, "/api/v1/historicalTrades", s.params).Sign()
 	trades, err := request.Do[[]TradeResponse](req)
 	if err != nil {
 		return nil, err

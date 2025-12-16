@@ -90,7 +90,7 @@ func (s *HistoricalTradesService) SetFromId(fromId int64) *HistoricalTradesServi
 }
 
 func (s *HistoricalTradesService) Do(ctx context.Context) ([]TradeResponse, error) {
-	req := request.Get(ctx, s.c, "/fapi/v1/historicalTrades", s.params).SetApiKeyHeader()
+	req := request.Get(ctx, s.c, "/fapi/v1/historicalTrades", s.params).Sign()
 	trades, err := request.Do[[]TradeResponse](req)
 	if err != nil {
 		return nil, err
@@ -467,26 +467,20 @@ type Ticker24hrResponse struct {
 }
 
 type TickerPriceService struct {
-	c      *FuturesClient
-	params map[string]string
+	c *FuturesClient
 }
 
 func (c *FuturesClient) NewTickerPriceService() *TickerPriceService {
-	return &TickerPriceService{c: c, params: map[string]string{}}
+	return &TickerPriceService{c: c}
 }
 
-func (s *TickerPriceService) SetSymbol(symbol string) *TickerPriceService {
-	s.params["symbol"] = symbol
-	return s
-}
-
-func (s *TickerPriceService) Do(ctx context.Context) (*TickerPriceResponse, error) {
-	req := request.Get(ctx, s.c, "/fapi/v1/ticker/price", s.params)
+func (s *TickerPriceService) Do(ctx context.Context, symbol string) (*TickerPriceResponse, error) {
+	req := request.Get(ctx, s.c, "/fapi/v1/ticker/price", map[string]string{"symbol": symbol})
 	return request.Do[TickerPriceResponse](req)
 }
 
 func (s *TickerPriceService) DoAll(ctx context.Context) ([]TickerPriceResponse, error) {
-	req := request.Get(ctx, s.c, "/fapi/v1/ticker/price", s.params)
+	req := request.Get(ctx, s.c, "/fapi/v1/ticker/price")
 	resp, err := request.Do[[]TickerPriceResponse](req)
 	if err != nil {
 		return nil, err
