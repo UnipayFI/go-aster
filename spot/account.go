@@ -30,7 +30,7 @@ type AccountResponse struct {
 	CanDeposit   bool             `json:"canDeposit"`
 	CanWithdraw  bool             `json:"canWithdraw"`
 	CanBurnAsset bool             `json:"canBurnAsset"`
-	UpdateTime   time.Time        `json:"updateTime,format:unixmilli"`
+	UpdateTime   time.Time        `json:"updateTime,format:unixnano"`
 	Balances     []AccountBalance `json:"balances"`
 }
 
