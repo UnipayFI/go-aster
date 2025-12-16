@@ -22,7 +22,7 @@ func (c *FuturesClient) NewChangePositionModeService(dualSidePosition bool) *Cha
 }
 
 func (s *ChangePositionModeService) Do(ctx context.Context) error {
-	req := request.Post(s.c, ctx, "/fapi/v1/positionSide/dual", s.params).Sign()
+	req := request.Post(s.c, ctx, "/fapi/v1/positionSide/dual", s.params).WithSignature()
 	return handlerGeneralResponse(request.Do[GeneralResponse](req))
 }
 
@@ -35,7 +35,7 @@ func (c *FuturesClient) NewGetPositionModeService() *GetPositionModeService {
 }
 
 func (s *GetPositionModeService) Do(ctx context.Context) (dualSidePosition bool, err error) {
-	req := request.Get(ctx, s.c, "/fapi/v1/positionSide/dual").Sign()
+	req := request.Get(ctx, s.c, "/fapi/v1/positionSide/dual").WithSignature()
 	resp, err := request.Do[struct {
 		DualSidePosition bool `json:"dualSidePosition"`
 	}](req)
@@ -58,7 +58,7 @@ func (c *FuturesClient) NewChangeMultiAssetsModeService(multiAssetsMargin bool) 
 }
 
 func (s *ChangeMultiAssetsModeService) Do(ctx context.Context) error {
-	req := request.Post(s.c, ctx, "/fapi/v1/multiAssetsMargin", s.params).Sign()
+	req := request.Post(s.c, ctx, "/fapi/v1/multiAssetsMargin", s.params).WithSignature()
 	return handlerGeneralResponse(request.Do[GeneralResponse](req))
 }
 
@@ -71,7 +71,7 @@ func (c *FuturesClient) NewGetMultiAssetsModeService() *GetMultiAssetsModeServic
 }
 
 func (s *GetMultiAssetsModeService) Do(ctx context.Context) (multiAssetsMargin bool, err error) {
-	req := request.Get(ctx, s.c, "/fapi/v1/multiAssetsMargin").Sign()
+	req := request.Get(ctx, s.c, "/fapi/v1/multiAssetsMargin").WithSignature()
 	resp, err := request.Do[struct {
 		MultiAssetsMargin bool `json:"multiAssetsMargin"`
 	}](req)
@@ -97,7 +97,7 @@ func (c *FuturesClient) NewChangeLeverageService(symbol string, leverage int) *C
 }
 
 func (s *ChangeLeverageService) Do(ctx context.Context) (*ChangeLeverageResponse, error) {
-	req := request.Post(s.c, ctx, "/fapi/v1/leverage", s.params).Sign()
+	req := request.Post(s.c, ctx, "/fapi/v1/leverage", s.params).WithSignature()
 	return request.Do[ChangeLeverageResponse](req)
 }
 
@@ -123,7 +123,7 @@ func (c *FuturesClient) NewChangeMarginTypeService(symbol string, marginType Mar
 }
 
 func (s *ChangeMarginTypeService) Do(ctx context.Context) error {
-	req := request.Post(s.c, ctx, "/fapi/v1/marginType", s.params).Sign()
+	req := request.Post(s.c, ctx, "/fapi/v1/marginType", s.params).WithSignature()
 	return handlerGeneralResponse(request.Do[GeneralResponse](req))
 }
 
@@ -142,7 +142,7 @@ func (s *GetPositionRiskService) SetSymbol(symbol string) *GetPositionRiskServic
 }
 
 func (s *GetPositionRiskService) Do(ctx context.Context) ([]PositionRiskResponse, error) {
-	req := request.Get(ctx, s.c, "/fapi/v2/positionRisk", s.params).Sign()
+	req := request.Get(ctx, s.c, "/fapi/v2/positionRisk", s.params).WithSignature()
 	resp, err := request.Do[[]PositionRiskResponse](req)
 	if err != nil {
 		return nil, err
@@ -189,7 +189,7 @@ func (s *AddIsolatedMarginService) SetPositionSide(positionSide PositionSide) *A
 }
 
 func (s *AddIsolatedMarginService) Do(ctx context.Context) (*AddIsolatedMarginResponse, error) {
-	req := request.Post(s.c, ctx, "/fapi/v1/positionMargin", s.params).Sign()
+	req := request.Post(s.c, ctx, "/fapi/v1/positionMargin", s.params).WithSignature()
 	return request.Do[AddIsolatedMarginResponse](req)
 }
 
@@ -209,7 +209,7 @@ func (c *FuturesClient) NewGetBalanceService() *GetBalanceService {
 }
 
 func (s *GetBalanceService) Do(ctx context.Context) ([]BalanceResponse, error) {
-	req := request.Get(ctx, s.c, "/fapi/v2/balance").Sign()
+	req := request.Get(ctx, s.c, "/fapi/v2/balance").WithSignature()
 	resp, err := request.Do[[]BalanceResponse](req)
 	if err != nil {
 		return nil, err
@@ -238,7 +238,7 @@ func (c *FuturesClient) NewGetAccountService() *GetAccountService {
 }
 
 func (s *GetAccountService) Do(ctx context.Context) (*AccountResponse, error) {
-	req := request.Get(ctx, s.c, "/fapi/v4/account").Sign()
+	req := request.Get(ctx, s.c, "/fapi/v4/account").WithSignature()
 	return request.Do[AccountResponse](req)
 }
 
@@ -331,7 +331,7 @@ func (s *GetIncomeService) SetLimit(limit int) *GetIncomeService {
 }
 
 func (s *GetIncomeService) Do(ctx context.Context) ([]IncomeResponse, error) {
-	req := request.Get(ctx, s.c, "/fapi/v1/income", s.params).Sign()
+	req := request.Get(ctx, s.c, "/fapi/v1/income", s.params).WithSignature()
 	resp, err := request.Do[[]IncomeResponse](req)
 	if err != nil {
 		return nil, err
@@ -380,7 +380,7 @@ func (s *GetUserTradesService) SetLimit(limit int) *GetUserTradesService {
 }
 
 func (s *GetUserTradesService) Do(ctx context.Context) ([]UserTradeResponse, error) {
-	req := request.Get(ctx, s.c, "/fapi/v1/userTrades", s.params).Sign()
+	req := request.Get(ctx, s.c, "/fapi/v1/userTrades", s.params).WithSignature()
 	resp, err := request.Do[[]UserTradeResponse](req)
 	if err != nil {
 		return nil, err
@@ -416,7 +416,7 @@ func (c *FuturesClient) NewGetCommissionRateService(symbol string) *GetCommissio
 }
 
 func (s *GetCommissionRateService) Do(ctx context.Context) (*CommissionRateResponse, error) {
-	req := request.Get(ctx, s.c, "/fapi/v1/commissionRate", s.params).Sign()
+	req := request.Get(ctx, s.c, "/fapi/v1/commissionRate", s.params).WithSignature()
 	return request.Do[CommissionRateResponse](req)
 }
 
@@ -461,7 +461,7 @@ func (s *GetForceOrdersService) SetLimit(limit int) *GetForceOrdersService {
 }
 
 func (s *GetForceOrdersService) Do(ctx context.Context) ([]ForceOrderResponse, error) {
-	req := request.Get(ctx, s.c, "/fapi/v1/forceOrders", s.params).Sign()
+	req := request.Get(ctx, s.c, "/fapi/v1/forceOrders", s.params).WithSignature()
 	resp, err := request.Do[[]ForceOrderResponse](req)
 	if err != nil {
 		return nil, err
@@ -522,7 +522,7 @@ func (s *GetPositionMarginHistoryService) SetLimit(limit int) *GetPositionMargin
 }
 
 func (s *GetPositionMarginHistoryService) Do(ctx context.Context) ([]PositionMarginHistoryResponse, error) {
-	req := request.Get(ctx, s.c, "/fapi/v1/positionMargin/history", s.params).Sign()
+	req := request.Get(ctx, s.c, "/fapi/v1/positionMargin/history", s.params).WithSignature()
 	resp, err := request.Do[[]PositionMarginHistoryResponse](req)
 	if err != nil {
 		return nil, err
@@ -548,7 +548,7 @@ func (c *FuturesClient) NewGetLeverageBracketService() *GetLeverageBracketServic
 }
 
 func (s *GetLeverageBracketService) DoAll(ctx context.Context) ([]LeverageBracketResponse, error) {
-	req := request.Get(ctx, s.c, "/fapi/v1/leverageBracket").Sign()
+	req := request.Get(ctx, s.c, "/fapi/v1/leverageBracket").WithSignature()
 	resp, err := request.Do[[]LeverageBracketResponse](req)
 	if err != nil {
 		return nil, err
@@ -557,7 +557,7 @@ func (s *GetLeverageBracketService) DoAll(ctx context.Context) ([]LeverageBracke
 }
 
 func (s *GetLeverageBracketService) Do(ctx context.Context, symbol string) ([]LeverageBracketResponse, error) {
-	req := request.Get(ctx, s.c, "/fapi/v1/leverageBracket", map[string]string{"symbol": symbol}).Sign()
+	req := request.Get(ctx, s.c, "/fapi/v1/leverageBracket", map[string]string{"symbol": symbol}).WithSignature()
 	resp, err := request.Do[[]LeverageBracketResponse](req)
 	if err != nil {
 		return nil, err
@@ -594,7 +594,7 @@ func (s *GetAdlQuantileService) SetSymbol(symbol string) *GetAdlQuantileService 
 }
 
 func (s *GetAdlQuantileService) Do(ctx context.Context) ([]AdlQuantileResponse, error) {
-	req := request.Get(ctx, s.c, "/fapi/v1/adlQuantile", s.params).Sign()
+	req := request.Get(ctx, s.c, "/fapi/v1/adlQuantile", s.params).WithSignature()
 	resp, err := request.Do[[]AdlQuantileResponse](req)
 	if err != nil {
 		return nil, err
@@ -623,7 +623,7 @@ func (c *FuturesClient) NewCreateListenKeyService() *CreateListenKeyService {
 }
 
 func (s *CreateListenKeyService) Do(ctx context.Context) (*ListenKeyResponse, error) {
-	req := request.Post(s.c, ctx, "/fapi/v1/listenKey").Sign()
+	req := request.Post(s.c, ctx, "/fapi/v1/listenKey").WithApiKey()
 	return request.Do[ListenKeyResponse](req)
 }
 
@@ -640,7 +640,7 @@ func (c *FuturesClient) NewExtendListenKeyService() *ExtendListenKeyService {
 }
 
 func (s *ExtendListenKeyService) Do(ctx context.Context) error {
-	req := request.Put(ctx, s.c, "/fapi/v1/listenKey").Sign()
+	req := request.Put(ctx, s.c, "/fapi/v1/listenKey").WithApiKey()
 	_, err := request.Do[struct{}](req)
 	return err
 }
@@ -654,7 +654,7 @@ func (c *FuturesClient) NewCloseListenKeyService() *CloseListenKeyService {
 }
 
 func (s *CloseListenKeyService) Do(ctx context.Context) error {
-	req := request.Delete(ctx, s.c, "/fapi/v1/listenKey").Sign()
+	req := request.Delete(ctx, s.c, "/fapi/v1/listenKey").WithApiKey()
 	_, err := request.Do[struct{}](req)
 	return err
 }

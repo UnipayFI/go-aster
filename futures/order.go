@@ -88,7 +88,7 @@ func (s *CreateOrderService) SetNewOrderRespType(newOrderRespType NewOrderRespTy
 }
 
 func (s *CreateOrderService) Do(ctx context.Context) (*OrderResponse, error) {
-	req := request.Post(s.c, ctx, "/fapi/v1/order", s.params).Sign()
+	req := request.Post(s.c, ctx, "/fapi/v1/order", s.params).WithSignature()
 	return request.Do[OrderResponse](req)
 }
 
@@ -136,7 +136,7 @@ func (s *CreateBatchOrdersService) AddOrder(order map[string]string) *CreateBatc
 func (s *CreateBatchOrdersService) Do(ctx context.Context) ([]OrderResponse, error) {
 	data, _ := json.Marshal(s.orders)
 	params := map[string]string{"batchOrders": string(data)}
-	req := request.Post(s.c, ctx, "/fapi/v1/batchOrders", params).Sign()
+	req := request.Post(s.c, ctx, "/fapi/v1/batchOrders", params).WithSignature()
 	resp, err := request.Do[[]OrderResponse](req)
 	if err != nil {
 		return nil, err
@@ -167,7 +167,7 @@ func (s *CancelOrderService) SetOrigClientOrderId(origClientOrderId string) *Can
 }
 
 func (s *CancelOrderService) Do(ctx context.Context) (*OrderResponse, error) {
-	req := request.Delete(ctx, s.c, "/fapi/v1/order", s.params).Sign()
+	req := request.Delete(ctx, s.c, "/fapi/v1/order", s.params).WithSignature()
 	return request.Do[OrderResponse](req)
 }
 
@@ -184,7 +184,7 @@ func (c *FuturesClient) NewCancelAllOrdersService(symbol string) *CancelAllOrder
 }
 
 func (s *CancelAllOrdersService) Do(ctx context.Context) (*CancelAllOrdersResponse, error) {
-	req := request.Delete(ctx, s.c, "/fapi/v1/allOpenOrders", s.params).Sign()
+	req := request.Delete(ctx, s.c, "/fapi/v1/allOpenOrders", s.params).WithSignature()
 	return request.Do[CancelAllOrdersResponse](req)
 }
 
@@ -218,7 +218,7 @@ func (s *CancelBatchOrdersService) SetOrigClientOrderIdList(origClientOrderIds [
 }
 
 func (s *CancelBatchOrdersService) Do(ctx context.Context) ([]OrderResponse, error) {
-	req := request.Delete(ctx, s.c, "/fapi/v1/batchOrders", s.params).Sign()
+	req := request.Delete(ctx, s.c, "/fapi/v1/batchOrders", s.params).WithSignature()
 	resp, err := request.Do[[]OrderResponse](req)
 	if err != nil {
 		return nil, err
@@ -249,7 +249,7 @@ func (s *GetOrderService) SetOrigClientOrderId(origClientOrderId string) *GetOrd
 }
 
 func (s *GetOrderService) Do(ctx context.Context) (*OrderResponse, error) {
-	req := request.Get(ctx, s.c, "/fapi/v1/order", s.params).Sign()
+	req := request.Get(ctx, s.c, "/fapi/v1/order", s.params).WithSignature()
 	return request.Do[OrderResponse](req)
 }
 
@@ -276,7 +276,7 @@ func (s *GetOpenOrderService) SetOrigClientOrderId(origClientOrderId string) *Ge
 }
 
 func (s *GetOpenOrderService) Do(ctx context.Context) (*OrderResponse, error) {
-	req := request.Get(ctx, s.c, "/fapi/v1/openOrder", s.params).Sign()
+	req := request.Get(ctx, s.c, "/fapi/v1/openOrder", s.params).WithSignature()
 	return request.Do[OrderResponse](req)
 }
 
@@ -298,7 +298,7 @@ func (s *GetOpenOrdersService) SetSymbol(symbol string) *GetOpenOrdersService {
 }
 
 func (s *GetOpenOrdersService) Do(ctx context.Context) ([]OrderResponse, error) {
-	req := request.Get(ctx, s.c, "/fapi/v1/openOrders", s.params).Sign()
+	req := request.Get(ctx, s.c, "/fapi/v1/openOrders", s.params).WithSignature()
 	orders, err := request.Do[[]OrderResponse](req)
 	if err != nil {
 		return nil, err
@@ -339,7 +339,7 @@ func (s *GetAllOrdersService) SetLimit(limit int) *GetAllOrdersService {
 }
 
 func (s *GetAllOrdersService) Do(ctx context.Context) ([]OrderResponse, error) {
-	req := request.Get(ctx, s.c, "/fapi/v1/allOrders", s.params).Sign()
+	req := request.Get(ctx, s.c, "/fapi/v1/allOrders", s.params).WithSignature()
 	orders, err := request.Do[[]OrderResponse](req)
 	if err != nil {
 		return nil, err
@@ -363,7 +363,7 @@ func (c *FuturesClient) NewCountdownCancelAllService(symbol string, countdownTim
 }
 
 func (s *CountdownCancelAllService) Do(ctx context.Context) (*CountdownCancelAllResponse, error) {
-	req := request.Post(s.c, ctx, "/fapi/v1/countdownCancelAll", s.params).Sign()
+	req := request.Post(s.c, ctx, "/fapi/v1/countdownCancelAll", s.params).WithSignature()
 	return request.Do[CountdownCancelAllResponse](req)
 }
 
@@ -390,7 +390,7 @@ func (c *FuturesClient) NewWalletTransferService(asset string, amount float64, c
 }
 
 func (s *WalletTransferService) Do(ctx context.Context) (*WalletTransferResponse, error) {
-	req := request.Post(s.c, ctx, "/fapi/v1/asset/wallet/transfer", s.params).Sign()
+	req := request.Post(s.c, ctx, "/fapi/v1/asset/wallet/transfer", s.params).WithSignature()
 	return request.Do[WalletTransferResponse](req)
 }
 
