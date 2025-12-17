@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/UnipayFI/go-aster/internal/request"
+	"github.com/UnipayFI/go-aster/request"
 )
 
 type PingService struct {

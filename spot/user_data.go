@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/UnipayFI/go-aster/internal/request"
+	"github.com/UnipayFI/go-aster/request"
 	"github.com/shopspring/decimal"
 	"github.com/tidwall/gjson"
 )
@@ -28,35 +28,25 @@ func (s *SubscribeUserDataStreamService) Do(ctx context.Context, handler UserDat
 		}
 		switch UserDataEventType(gjson.GetBytes(*message, "e").String()) {
 		case OutboundAccountPosition:
-			var accountUpdateEvent WsAccountUpdateEvent
-			err = s.c.GetHttpClient().JSONUnmarshal(*message, &accountUpdateEvent)
-			if err != nil {
-				handler.OnError(err)
-				return
-			}
-			handler.OnAccountUpdate(&accountUpdateEvent)
+			handleEvent(s, message, &WsAccountUpdateEvent{}, handler.OnAccountUpdate, handler.OnError)
 		case ExecutionReport:
-			var orderUpdateEvent WsOrderUpdateEvent
-			err = s.c.GetHttpClient().JSONUnmarshal(*message, &orderUpdateEvent)
-			if err != nil {
-				handler.OnError(err)
-				return
-			}
-			handler.OnOrderUpdate(&orderUpdateEvent)
+			handleEvent(s, message, &WsOrderUpdateEvent{}, handler.OnOrderUpdate, handler.OnError)
 		case ListenedKeyExpired:
-			var listenKeyExpiredEvent WsListenKeyExpiredEvent
-			err = s.c.GetHttpClient().JSONUnmarshal(*message, &listenKeyExpiredEvent)
-			if err != nil {
-				handler.OnError(err)
-				return
-			}
-			handler.OnListenKeyExpired(&listenKeyExpiredEvent)
+			handleEvent(s, message, &WsListenKeyExpiredEvent{}, handler.OnListenKeyExpired, handler.OnError)
 		default:
 			handler.OnError(fmt.Errorf("unknown event type: %s", gjson.GetBytes(*message, "e").String()))
 			return
 		}
 	}
 	return request.Subscribe(ctx, s.c, s.listenKey, callback)
+}
+
+func handleEvent[T any](s *SubscribeUserDataStreamService, message *json.RawMessage, target *T, handle func(*T), onError func(error)) {
+	if err := s.c.GetHttpClient().JSONUnmarshal(*message, target); err != nil {
+		onError(err)
+		return
+	}
+	handle(target)
 }
 
 type UserDataHandler interface {
@@ -67,10 +57,9 @@ type UserDataHandler interface {
 }
 
 type WsAccountUpdateEvent struct {
-	Event             UserDataEventType  `json:"e"`
-	Time              time.Time          `json:"E,format:unixmilli"`
-	AccountUpdateTime time.Time          `json:"u,format:unix"`
+	WsUserDataBaseEvent
 	TransactionTime   time.Time          `json:"T,format:unix"`
+	AccountUpdateTime time.Time          `json:"u,format:unix"`
 	Balances          []WsAccountBalance `json:"B"`
 	EventReasonType   string             `json:"m"`
 }
@@ -82,36 +71,39 @@ type WsAccountBalance struct {
 }
 
 type WsOrderUpdateEvent struct {
-	Event                                  UserDataEventType `json:"e"`
-	Time                                   time.Time         `json:"E,format:unixmilli"`
-	Symbol                                 string            `json:"s"`
-	ClientOrderId                          string            `json:"c"`
-	OrderSide                              OrderSide         `json:"S"`
-	OrderType                              OrderType         `json:"o"`
-	TimeInForce                            TimeInForce       `json:"f"`
-	Quantity                               decimal.Decimal   `json:"q"`
-	Price                                  decimal.Decimal   `json:"p"`
-	AveragePrice                           decimal.Decimal   `json:"ap"`
-	StopPrice                              decimal.Decimal   `json:"P"`
-	ExecutionType                          ExecutionType     `json:"x"`
-	OrderStatus                            OrderStatus       `json:"X"`
-	OrderId                                int64             `json:"i"`
-	LastExecutedQuantity                   decimal.Decimal   `json:"l"`
-	CumulativeFilledQuantity               decimal.Decimal   `json:"z"`
-	LastExecutedPrice                      decimal.Decimal   `json:"L"`
-	CommissionAmount                       decimal.Decimal   `json:"n"`
-	CommissionAsset                        string            `json:"N"`
-	TransactionTime                        time.Time         `json:"T,format:unixmilli"`
-	TransactionId                          int64             `json:"t"`
-	IsMaker                                bool              `json:"m"`
-	OriginalOrderType                      OrderType         `json:"ot"`
-	OrderCreationTime                      time.Time         `json:"O,format:unixmilli"`
-	CumulativeQuoteAssetTransactedQuantity decimal.Decimal   `json:"Z"`
-	LastQuoteAssetTransactedQuantity       decimal.Decimal   `json:"Y"`
-	QuoteOrderQty                          decimal.Decimal   `json:"Q"`
+	WsUserDataBaseEvent
+	Symbol                                 string          `json:"s"`
+	ClientOrderId                          string          `json:"c"`
+	OrderSide                              OrderSide       `json:"S"`
+	OrderType                              OrderType       `json:"o"`
+	TimeInForce                            TimeInForce     `json:"f"`
+	Quantity                               decimal.Decimal `json:"q"`
+	Price                                  decimal.Decimal `json:"p"`
+	AveragePrice                           decimal.Decimal `json:"ap"`
+	StopPrice                              decimal.Decimal `json:"P"`
+	ExecutionType                          ExecutionType   `json:"x"`
+	OrderStatus                            OrderStatus     `json:"X"`
+	OrderId                                int64           `json:"i"`
+	LastExecutedQuantity                   decimal.Decimal `json:"l"`
+	CumulativeFilledQuantity               decimal.Decimal `json:"z"`
+	LastExecutedPrice                      decimal.Decimal `json:"L"`
+	CommissionAmount                       decimal.Decimal `json:"n"`
+	CommissionAsset                        string          `json:"N"`
+	TransactionTime                        time.Time       `json:"T,format:unixmilli"`
+	TransactionId                          int64           `json:"t"`
+	IsMaker                                bool            `json:"m"`
+	OriginalOrderType                      OrderType       `json:"ot"`
+	OrderCreationTime                      time.Time       `json:"O,format:unixmilli"`
+	CumulativeQuoteAssetTransactedQuantity decimal.Decimal `json:"Z"`
+	LastQuoteAssetTransactedQuantity       decimal.Decimal `json:"Y"`
+	QuoteOrderQty                          decimal.Decimal `json:"Q"`
 }
 
 type WsListenKeyExpiredEvent struct {
+	WsUserDataBaseEvent
+}
+
+type WsUserDataBaseEvent struct {
 	Event UserDataEventType `json:"e"`
 	Time  time.Time         `json:"E,format:unixmilli"`
 }

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/UnipayFI/go-aster/internal/request"
+	"github.com/UnipayFI/go-aster/request"
 	"github.com/shopspring/decimal"
 	"github.com/tidwall/gjson"
 )
@@ -26,45 +26,31 @@ func (s *SubscribeUserDataStreamService) Do(ctx context.Context, handler UserDat
 			handler.OnError(err)
 			return
 		}
+
 		switch UserDataEventType(gjson.GetBytes(*message, "e").String()) {
 		case AccountUpdate:
-			var accountUpdate WsAccountUpdateEvent
-			err = s.c.GetHttpClient().JSONUnmarshal(*message, &accountUpdate)
-			if err != nil {
-				handler.OnError(err)
-				return
-			}
-			handler.OnAccountUpdate(&accountUpdate)
+			handleEvent(s, message, &WsAccountUpdateEvent{}, handler.OnAccountUpdate, handler.OnError)
 		case OrderTradeUpdate:
-			var orderTradeUpdate WsOrderTradeUpdateEvent
-			err = s.c.GetHttpClient().JSONUnmarshal(*message, &orderTradeUpdate)
-			if err != nil {
-				handler.OnError(err)
-				return
-			}
-			handler.OnOrderTradeUpdate(&orderTradeUpdate)
+			handleEvent(s, message, &WsOrderTradeUpdateEvent{}, handler.OnOrderTradeUpdate, handler.OnError)
 		case AccountConfigUpdate:
-			var accountConfigUpdate WsAccountConfigUpdateEvent
-			err = s.c.GetHttpClient().JSONUnmarshal(*message, &accountConfigUpdate)
-			if err != nil {
-				handler.OnError(err)
-				return
-			}
-			handler.OnAccountConfigUpdate(&accountConfigUpdate)
+			handleEvent(s, message, &WsAccountConfigUpdateEvent{}, handler.OnAccountConfigUpdate, handler.OnError)
 		case ListenKeyExpired:
-			var listenKeyExpired WsListenKeyExpiredEvent
-			err = s.c.GetHttpClient().JSONUnmarshal(*message, &listenKeyExpired)
-			if err != nil {
-				handler.OnError(err)
-				return
-			}
-			handler.OnListenKeyExpired(&listenKeyExpired)
+			handleEvent(s, message, &WsListenKeyExpiredEvent{}, handler.OnListenKeyExpired, handler.OnError)
 		default:
 			handler.OnError(fmt.Errorf("unknown event type: %s", gjson.GetBytes(*message, "e").String()))
 			return
 		}
 	}
+
 	return request.Subscribe(ctx, s.c, s.listenKey, callback)
+}
+
+func handleEvent[T any](s *SubscribeUserDataStreamService, message *json.RawMessage, target *T, handle func(*T), onError func(error)) {
+	if err := s.c.GetHttpClient().JSONUnmarshal(*message, target); err != nil {
+		onError(err)
+		return
+	}
+	handle(target)
 }
 
 type UserDataHandler interface {
@@ -76,10 +62,9 @@ type UserDataHandler interface {
 }
 
 type WsAccountUpdateEvent struct {
-	Event           UserDataEventType `json:"e"`
-	Time            time.Time         `json:"E,format:unixmilli"`
-	TransactionTime time.Time         `json:"T,format:unixmilli"`
-	AccountUpdate   WsAccountUpdate   `json:"a"`
+	WsUserDataBaseEvent
+	TransactionTime time.Time       `json:"T,format:unixmilli"`
+	AccountUpdate   WsAccountUpdate `json:"a"`
 }
 
 type WsAccountUpdate struct {
@@ -107,8 +92,7 @@ type WsAccountPosition struct {
 }
 
 type WsOrderTradeUpdateEvent struct {
-	Event            UserDataEventType  `json:"e"`
-	Time             time.Time          `json:"E,format:unixmilli"`
+	WsUserDataBaseEvent
 	TransactionTime  time.Time          `json:"T,format:unixmilli"`
 	OrderTradeUpdate WsOrderTradeUpdate `json:"o"`
 }
@@ -152,8 +136,7 @@ const (
 )
 
 type WsAccountConfigUpdateEvent struct {
-	Event                UserDataEventType       `json:"e"`
-	Time                 time.Time               `json:"E,format:unixmilli"`
+	WsUserDataBaseEvent
 	TransactionTime      time.Time               `json:"T,format:unixmilli"`
 	SymbolLeverageUpdate *WsSymbolLeverageUpdate `json:"ac"`
 	UserAccountUpdate    *WsUserAccountUpdate    `json:"u"`
@@ -171,6 +154,10 @@ type WsUserAccountUpdate struct {
 }
 
 type WsListenKeyExpiredEvent struct {
+	WsUserDataBaseEvent
+}
+
+type WsUserDataBaseEvent struct {
 	Event UserDataEventType `json:"e"`
 	Time  time.Time         `json:"E,format:unixmilli"`
 }

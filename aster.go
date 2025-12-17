@@ -10,7 +10,7 @@ func NewSpotClient(options ...client.Options) *spot.SpotClient {
 	return spot.NewSpotClient(options...)
 }
 
-func NewSpotWebSocketClient(options ...client.Options) *spot.SpotWebSocketClient {
+func NewSpotWebSocketClient(options ...client.WebSocketOptions) *spot.SpotWebSocketClient {
 	return spot.NewSpotWebSocketClient(options...)
 }
 
@@ -18,6 +18,6 @@ func NewFuturesClient(options ...client.Options) *futures.FuturesClient {
 	return futures.NewFuturesClient(options...)
 }
 
-func NewFuturesWebSocketClient(options ...client.Options) *futures.FuturesWebSocketClient {
+func NewFuturesWebSocketClient(options ...client.WebSocketOptions) *futures.FuturesWebSocketClient {
 	return futures.NewFuturesWebSocketClient(options...)
 }

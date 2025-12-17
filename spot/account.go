@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/UnipayFI/go-aster/internal/request"
+	"github.com/UnipayFI/go-aster/request"
 	"github.com/shopspring/decimal"
 )
 

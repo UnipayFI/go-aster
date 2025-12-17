@@ -6,7 +6,7 @@ import (
 
 	"github.com/UnipayFI/go-aster/client"
 	"github.com/UnipayFI/go-aster/common"
-	"github.com/UnipayFI/go-aster/internal/request"
+	"github.com/UnipayFI/go-aster/request"
 )
 
 var _ request.Client = (*FuturesClient)(nil)
@@ -45,7 +45,10 @@ type FuturesWebSocketClient struct {
 	*client.WebSocketClient
 }
 
-func NewFuturesWebSocketClient(options ...client.Options) *FuturesWebSocketClient {
-	opts := append([]client.Options{client.WithBaseURL(common.DEFAULT_FUTURES_WEBSOCKET_BASE_URL)}, options...)
+func NewFuturesWebSocketClient(options ...client.WebSocketOptions) *FuturesWebSocketClient {
+	opts := append(
+		[]client.WebSocketOptions{client.WithWebSocketBaseURL(common.DEFAULT_FUTURES_WEBSOCKET_BASE_URL)},
+		options...,
+	)
 	return &FuturesWebSocketClient{client.NewWebSocketClient(opts...)}
 }

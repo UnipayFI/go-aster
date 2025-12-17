@@ -21,6 +21,8 @@ type Client interface {
 	GetLogger() log.Logger
 	GetSignFn() func(apiKey, secretKey string, payload string) (string, error)
 	GetTimeOffsetMs() int64
+	SetUsedWeight(used, used1m *int64)
+	SetOrderCount(count10s, count1d *int64)
 }
 
 type Request struct {

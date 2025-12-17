@@ -71,3 +71,29 @@ func WithTimeOffset(timeOffsetMs int64) Options {
 		opt.timeOffsetMs = timeOffsetMs
 	}
 }
+
+type WebSocketOption struct {
+	logger log.Logger
+	client *resty.Client
+}
+
+type WebSocketOptions func(*WebSocketOption)
+
+func defaultWebSocketOption() *WebSocketOption {
+	return &WebSocketOption{
+		logger: log.GetDefaultLogger(),
+		client: defaultHttpClient(),
+	}
+}
+
+func WithWebSocketBaseURL(baseURL string) WebSocketOptions {
+	return func(opt *WebSocketOption) {
+		opt.client.SetBaseURL(baseURL)
+	}
+}
+
+func WithWebSocketLogger(logger log.Logger) WebSocketOptions {
+	return func(opt *WebSocketOption) {
+		opt.logger = logger
+	}
+}

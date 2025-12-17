@@ -8,10 +8,17 @@ import (
 	"time"
 
 	"github.com/UnipayFI/go-aster/common"
+	"github.com/UnipayFI/go-aster/pkg/log"
+	"github.com/go-resty/resty/v2"
 	"github.com/gorilla/websocket"
 )
 
-func Subscribe[T any](ctx context.Context, client Client, endpoint string, callback func(message *T, err error)) (doneC <-chan struct{}, stopC chan struct{}, err error) {
+type WebSocketClient interface {
+	GetHttpClient() *resty.Client
+	GetLogger() log.Logger
+}
+
+func Subscribe[T any](ctx context.Context, client WebSocketClient, endpoint string, callback func(message *T, err error)) (doneC <-chan struct{}, stopC chan struct{}, err error) {
 	fullURL, _ := url.JoinPath(client.GetHttpClient().BaseURL, endpoint)
 	dialer := websocket.Dialer{
 		Proxy:             http.ProxyFromEnvironment,

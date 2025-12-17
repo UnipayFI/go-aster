@@ -6,7 +6,10 @@ import (
 
 	"github.com/UnipayFI/go-aster/client"
 	"github.com/UnipayFI/go-aster/common"
+	"github.com/UnipayFI/go-aster/request"
 )
+
+var _ request.Client = (*SpotClient)(nil)
 
 type SpotClient struct {
 	*client.Client
@@ -44,9 +47,9 @@ type SpotWebSocketClient struct {
 	*client.WebSocketClient
 }
 
-func NewSpotWebSocketClient(options ...client.Options) *SpotWebSocketClient {
+func NewSpotWebSocketClient(options ...client.WebSocketOptions) *SpotWebSocketClient {
 	options = append(
-		[]client.Options{client.WithBaseURL(common.DEFAULT_SPOT_WEBSOCKET_BASE_URL)},
+		[]client.WebSocketOptions{client.WithWebSocketBaseURL(common.DEFAULT_SPOT_WEBSOCKET_BASE_URL)},
 		options...,
 	)
 	return &SpotWebSocketClient{client.NewWebSocketClient(options...)}
