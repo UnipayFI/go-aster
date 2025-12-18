@@ -329,26 +329,19 @@ type Ticker24hrResponse struct {
 
 type TickerPriceService struct {
 	c *SpotClient
-
-	params map[string]string
 }
 
 func (c *SpotClient) NewTickerPriceService() *TickerPriceService {
-	return &TickerPriceService{c: c, params: map[string]string{}}
+	return &TickerPriceService{c: c}
 }
 
-func (s *TickerPriceService) SetSymbol(symbol string) *TickerPriceService {
-	s.params["symbol"] = symbol
-	return s
-}
-
-func (s *TickerPriceService) Do(ctx context.Context) (*TickerPriceResponse, error) {
-	req := request.Get(ctx, s.c, "/api/v1/ticker/price", s.params)
+func (s *TickerPriceService) Do(ctx context.Context, symbol string) (*TickerPriceResponse, error) {
+	req := request.Get(ctx, s.c, "/api/v1/ticker/price", map[string]string{"symbol": symbol})
 	return request.Do[TickerPriceResponse](req)
 }
 
 func (s *TickerPriceService) DoAll(ctx context.Context) ([]TickerPriceResponse, error) {
-	req := request.Get(ctx, s.c, "/api/v1/ticker/price", s.params)
+	req := request.Get(ctx, s.c, "/api/v1/ticker/price")
 	tickers, err := request.Do[[]TickerPriceResponse](req)
 	if err != nil {
 		return nil, err

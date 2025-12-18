@@ -580,26 +580,25 @@ type LeverageBracket struct {
 }
 
 type GetAdlQuantileService struct {
-	c      *FuturesClient
-	params map[string]string
+	c *FuturesClient
 }
 
 func (c *FuturesClient) NewGetAdlQuantileService() *GetAdlQuantileService {
-	return &GetAdlQuantileService{c: c, params: map[string]string{}}
+	return &GetAdlQuantileService{c: c}
 }
 
-func (s *GetAdlQuantileService) SetSymbol(symbol string) *GetAdlQuantileService {
-	s.params["symbol"] = symbol
-	return s
-}
-
-func (s *GetAdlQuantileService) Do(ctx context.Context) ([]AdlQuantileResponse, error) {
-	req := request.Get(ctx, s.c, "/fapi/v1/adlQuantile", s.params).WithSignature()
+func (s *GetAdlQuantileService) DoAll(ctx context.Context) ([]AdlQuantileResponse, error) {
+	req := request.Get(ctx, s.c, "/fapi/v1/adlQuantile").WithSignature()
 	resp, err := request.Do[[]AdlQuantileResponse](req)
 	if err != nil {
 		return nil, err
 	}
 	return *resp, nil
+}
+
+func (s *GetAdlQuantileService) Do(ctx context.Context, symbol string) (*AdlQuantileResponse, error) {
+	req := request.Get(ctx, s.c, "/fapi/v1/adlQuantile", map[string]string{"symbol": symbol}).WithSignature()
+	return request.Do[AdlQuantileResponse](req)
 }
 
 type AdlQuantileResponse struct {

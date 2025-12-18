@@ -320,17 +320,11 @@ func (s *MarkPriceKlinesService) Do(ctx context.Context) ([]Kline, error) {
 }
 
 type PremiumIndexService struct {
-	c      *FuturesClient
-	params map[string]string
+	c *FuturesClient
 }
 
 func (c *FuturesClient) NewPremiumIndexService() *PremiumIndexService {
-	return &PremiumIndexService{c: c, params: map[string]string{}}
-}
-
-func (s *PremiumIndexService) SetSymbol(symbol string) *PremiumIndexService {
-	s.params["symbol"] = symbol
-	return s
+	return &PremiumIndexService{c: c}
 }
 
 func (s *PremiumIndexService) Do(ctx context.Context, symbol string) (*PremiumIndexResponse, error) {
@@ -339,7 +333,7 @@ func (s *PremiumIndexService) Do(ctx context.Context, symbol string) (*PremiumIn
 }
 
 func (s *PremiumIndexService) DoAll(ctx context.Context) ([]PremiumIndexResponse, error) {
-	req := request.Get(ctx, s.c, "/fapi/v1/premiumIndex", s.params)
+	req := request.Get(ctx, s.c, "/fapi/v1/premiumIndex")
 	resp, err := request.Do[[]PremiumIndexResponse](req)
 	if err != nil {
 		return nil, err
