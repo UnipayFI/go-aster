@@ -291,13 +291,15 @@ func (c *SpotClient) NewCreateListenKeyService() *CreateListenKeyService {
 	return &CreateListenKeyService{c: c}
 }
 
-func (s *CreateListenKeyService) Do(ctx context.Context) (*ListenKeyResponse, error) {
+func (s *CreateListenKeyService) Do(ctx context.Context) (string, error) {
 	req := request.Post(s.c, ctx, "/api/v1/listenKey").WithApiKey()
-	return request.Do[ListenKeyResponse](req)
-}
-
-type ListenKeyResponse struct {
-	ListenKey string `json:"listenKey"`
+	resp, err := request.Do[struct {
+		ListenKey string `json:"listenKey"`
+	}](req)
+	if err != nil {
+		return "", err
+	}
+	return resp.ListenKey, nil
 }
 
 type ExtendListenKeyService struct {
