@@ -123,7 +123,12 @@ type WsOrderTradeUpdate struct {
 	IsMaker              bool            `json:"m"`                  // Is this trade the maker side?
 	IsReduceOnly         bool            `json:"R"`                  // Is this reduce only
 	WorkingType          WorkingType     `json:"wt"`                 // Stop Price Working Type
-	RealizedPnL          string          `json:"rp"`                 // Realized Profit of the trade
+	OriginalOrderType    OrderType       `json:"ot"`                 // Original Order Type
+	PositionSide         PositionSide    `json:"ps"`                 // Position Side
+	IsClosingPosition    bool            `json:"cp"`                 // If Close-All, pushed with conditional order
+	ActivationPrice      decimal.Decimal `json:"AP"`                 // Activation Price, only puhed with TRAILING_STOP_MARKET order
+	CallbackRate         decimal.Decimal `json:"cr"`                 //Callback Rate, only puhed with TRAILING_STOP_MARKET order
+	RealizedProfit       decimal.Decimal `json:"rp"`                 // Realized Profit of the trade
 }
 
 type ExecutionType string
