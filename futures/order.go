@@ -183,14 +183,9 @@ func (c *FuturesClient) NewCancelAllOrdersService(symbol string) *CancelAllOrder
 	}
 }
 
-func (s *CancelAllOrdersService) Do(ctx context.Context) (*CancelAllOrdersResponse, error) {
+func (s *CancelAllOrdersService) Do(ctx context.Context) error {
 	req := request.Delete(ctx, s.c, "/fapi/v1/allOpenOrders", s.params).WithSignature()
-	return request.Do[CancelAllOrdersResponse](req)
-}
-
-type CancelAllOrdersResponse struct {
-	Code int    `json:"code"`
-	Msg  string `json:"msg"`
+	return handlerGeneralResponse(request.Do[GeneralResponse](req))
 }
 
 type CancelBatchOrdersService struct {
