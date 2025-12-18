@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/UnipayFI/go-aster/common"
 	"github.com/UnipayFI/go-aster/request"
 	"github.com/shopspring/decimal"
 	"github.com/tidwall/gjson"
@@ -38,7 +39,7 @@ func (s *SubscribeUserDataStreamService) Do(ctx context.Context, handler UserDat
 			return
 		}
 	}
-	return request.Subscribe(ctx, s.c, s.listenKey, callback)
+	return request.Subscribe(ctx, s.c, common.WEBSOCKET_STREAM_SEPARATOR+s.listenKey, callback)
 }
 
 func handleEvent[T any](s *SubscribeUserDataStreamService, message *json.RawMessage, target *T, handle func(*T), onError func(error)) {
@@ -57,7 +58,7 @@ type UserDataHandler interface {
 }
 
 type WsAccountUpdateEvent struct {
-	WsUserDataBaseEvent
+	WsBaseEvent
 	TransactionTime   time.Time          `json:"T,format:unix"`
 	AccountUpdateTime time.Time          `json:"u,format:unix"`
 	Balances          []WsAccountBalance `json:"B"`
@@ -71,7 +72,7 @@ type WsAccountBalance struct {
 }
 
 type WsOrderUpdateEvent struct {
-	WsUserDataBaseEvent
+	WsBaseEvent
 	Symbol                                 string          `json:"s"`
 	ClientOrderId                          string          `json:"c"`
 	OrderSide                              OrderSide       `json:"S"`
@@ -100,10 +101,10 @@ type WsOrderUpdateEvent struct {
 }
 
 type WsListenKeyExpiredEvent struct {
-	WsUserDataBaseEvent
+	WsBaseEvent
 }
 
-type WsUserDataBaseEvent struct {
+type WsBaseEvent struct {
 	Event UserDataEventType `json:"e"`
 	Time  time.Time         `json:"E,format:unixmilli"`
 }

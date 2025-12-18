@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/tls"
 	"net/http"
-	"net/url"
 	"time"
 
 	"github.com/UnipayFI/go-aster/common"
@@ -19,7 +18,7 @@ type WebSocketClient interface {
 }
 
 func Subscribe[T any](ctx context.Context, client WebSocketClient, endpoint string, callback func(message *T, err error)) (doneC <-chan struct{}, stopC chan struct{}, err error) {
-	fullURL, _ := url.JoinPath(client.GetHttpClient().BaseURL, endpoint)
+	fullURL := client.GetHttpClient().BaseURL + endpoint
 	dialer := websocket.Dialer{
 		Proxy:             http.ProxyFromEnvironment,
 		HandshakeTimeout:  45 * time.Second,

@@ -32,11 +32,21 @@ func (s *DepthService) Do(ctx context.Context) (*DepthResponse, error) {
 }
 
 type DepthResponse struct {
-	LastUpdateId    int64                `json:"lastUpdateId"`
-	EventTime       time.Time            `json:"E,format:unixmilli"`
-	TransactionTime time.Time            `json:"T,format:unixmilli"`
-	Bids            [][2]decimal.Decimal `json:"bids"`
-	Asks            [][2]decimal.Decimal `json:"asks"`
+	LastUpdateId    int64       `json:"lastUpdateId"`
+	EventTime       time.Time   `json:"E,format:unixmilli"`
+	TransactionTime time.Time   `json:"T,format:unixmilli"`
+	Bids            []PriceSize `json:"bids"`
+	Asks            []PriceSize `json:"asks"`
+}
+
+type PriceSize [2]decimal.Decimal
+
+func (p *PriceSize) Price() decimal.Decimal {
+	return p[0]
+}
+
+func (p *PriceSize) Size() decimal.Decimal {
+	return p[1]
 }
 
 type GetTradesService struct {

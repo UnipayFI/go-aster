@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/UnipayFI/go-aster/common"
 	"github.com/UnipayFI/go-aster/request"
 	"github.com/shopspring/decimal"
 	"github.com/tidwall/gjson"
@@ -42,7 +43,7 @@ func (s *SubscribeUserDataStreamService) Do(ctx context.Context, handler UserDat
 		}
 	}
 
-	return request.Subscribe(ctx, s.c, s.listenKey, callback)
+	return request.Subscribe(ctx, s.c, common.WEBSOCKET_STREAM_SEPARATOR+s.listenKey, callback)
 }
 
 func handleEvent[T any](s *SubscribeUserDataStreamService, message *json.RawMessage, target *T, handle func(*T), onError func(error)) {
@@ -62,7 +63,7 @@ type UserDataHandler interface {
 }
 
 type WsAccountUpdateEvent struct {
-	WsUserDataBaseEvent
+	WsBaseEvent
 	TransactionTime time.Time       `json:"T,format:unixmilli"`
 	AccountUpdate   WsAccountUpdate `json:"a"`
 }
@@ -92,7 +93,7 @@ type WsAccountPosition struct {
 }
 
 type WsOrderTradeUpdateEvent struct {
-	WsUserDataBaseEvent
+	WsBaseEvent
 	TransactionTime  time.Time          `json:"T,format:unixmilli"`
 	OrderTradeUpdate WsOrderTradeUpdate `json:"o"`
 }
@@ -136,7 +137,7 @@ const (
 )
 
 type WsAccountConfigUpdateEvent struct {
-	WsUserDataBaseEvent
+	WsBaseEvent
 	TransactionTime      time.Time               `json:"T,format:unixmilli"`
 	SymbolLeverageUpdate *WsSymbolLeverageUpdate `json:"ac"`
 	UserAccountUpdate    *WsUserAccountUpdate    `json:"u"`
@@ -154,10 +155,10 @@ type WsUserAccountUpdate struct {
 }
 
 type WsListenKeyExpiredEvent struct {
-	WsUserDataBaseEvent
+	WsBaseEvent
 }
 
-type WsUserDataBaseEvent struct {
+type WsBaseEvent struct {
 	Event UserDataEventType `json:"e"`
 	Time  time.Time         `json:"E,format:unixmilli"`
 }
