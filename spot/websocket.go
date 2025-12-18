@@ -20,7 +20,7 @@ func (c *SpotWebSocketClient) NewSubscribeAggTradeService(symbol string) *Subscr
 	return &SubscribeAggTradeService{c: c, symbol: symbol}
 }
 
-func (s *SubscribeAggTradeService) Do(ctx context.Context, handler func(message *WsAggTradeResponse, err error)) (doneC <-chan struct{}, stopC chan struct{}, err error) {
+func (s *SubscribeAggTradeService) Do(ctx context.Context, handler func(message *WsAggTradeResponse, err error)) (done <-chan struct{}, stop chan<- struct{}, err error) {
 	url := common.WEBSOCKET_STREAM_SEPARATOR + strings.ToLower(s.symbol) + "@aggTrade"
 	return request.Subscribe(ctx, s.c, url, handler)
 }
@@ -51,13 +51,12 @@ func (c *SpotWebSocketClient) NewSubscribeCombinedDepthService(symbolLevels map[
 	return &SubscribeCombinedDepthService{c: c, symbolLevels: symbolLevels}
 }
 
-func (s *SubscribeCombinedDepthService) Do(ctx context.Context, handler func(message *WsCombinedDepthResponse, err error)) (doneC <-chan struct{}, stopC chan struct{}, err error) {
+func (s *SubscribeCombinedDepthService) Do(ctx context.Context, handler func(message *WsCombinedDepthResponse, err error)) (done <-chan struct{}, stop chan<- struct{}, err error) {
 	symbols := make([]string, 0, len(s.symbolLevels))
 	for symbol, level := range s.symbolLevels {
 		symbols = append(symbols, fmt.Sprintf("%s@depth%s", strings.ToLower(symbol), level))
 	}
 	url := "/stream?streams=" + strings.Join(symbols, "/")
-	fmt.Println(url)
 	return request.Subscribe(ctx, s.c, url, handler)
 }
 

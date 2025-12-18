@@ -17,7 +17,7 @@ type WebSocketClient interface {
 	GetLogger() log.Logger
 }
 
-func Subscribe[T any](ctx context.Context, client WebSocketClient, endpoint string, callback func(message *T, err error)) (doneC <-chan struct{}, stopC chan struct{}, err error) {
+func Subscribe[T any](ctx context.Context, client WebSocketClient, endpoint string, callback func(message *T, err error)) (done <-chan struct{}, stop chan<- struct{}, err error) {
 	fullURL := client.GetHttpClient().BaseURL + endpoint
 	dialer := websocket.Dialer{
 		Proxy:             http.ProxyFromEnvironment,
@@ -33,8 +33,8 @@ func Subscribe[T any](ctx context.Context, client WebSocketClient, endpoint stri
 		return nil, nil, err
 	}
 	conn.SetReadLimit(655350)
-	doneC = make(chan struct{})
-	stopC = make(chan struct{})
+	doneC := make(chan struct{})
+	stopC := make(chan struct{})
 
 	go keepAlive(conn, common.DEFAULT_KEEP_ALIVE_TIMEOUT, common.DEFAULT_KEEP_ALIVE_INTERVAL)
 
