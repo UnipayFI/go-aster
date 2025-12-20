@@ -21,7 +21,7 @@ func (c *FuturesWebSocketClient) NewSubscribeUserDataStreamService(listenKey str
 	return &SubscribeUserDataStreamService{c: c, listenKey: listenKey}
 }
 
-func (s *SubscribeUserDataStreamService) Do(ctx context.Context, handler UserDataHandler) (done <-chan struct{}, stop chan<- struct{}, err error) {
+func (s *SubscribeUserDataStreamService) Do(ctx context.Context, handler UserDataHandler) (done chan<- struct{}, stop <-chan struct{}, err error) {
 	callback := func(message *json.RawMessage, err error) {
 		if err != nil {
 			handler.OnError(err)

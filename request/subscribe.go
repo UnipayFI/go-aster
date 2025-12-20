@@ -17,7 +17,7 @@ type WebSocketClient interface {
 	GetLogger() log.Logger
 }
 
-func Subscribe[T any](ctx context.Context, client WebSocketClient, endpoint string, callback func(message *T, err error)) (done <-chan struct{}, stop chan<- struct{}, err error) {
+func Subscribe[T any](ctx context.Context, client WebSocketClient, endpoint string, callback func(message *T, err error)) (done chan<- struct{}, stop <-chan struct{}, err error) {
 	fullURL := client.GetHttpClient().BaseURL + endpoint
 	dialer := websocket.Dialer{
 		Proxy:             http.ProxyFromEnvironment,
