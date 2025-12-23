@@ -35,6 +35,8 @@ func (s *SubscribeUserDataStreamService) Do(ctx context.Context, handler UserDat
 			handleEvent(s, message, &WsOrderTradeUpdateEvent{}, handler.OnOrderTradeUpdate, handler.OnError)
 		case AccountConfigUpdate:
 			handleEvent(s, message, &WsAccountConfigUpdateEvent{}, handler.OnAccountConfigUpdate, handler.OnError)
+		case MarginCall:
+			handleEvent(s, message, &WsMarginCallEvent{}, handler.OnMarginCall, handler.OnError)
 		case ListenKeyExpired:
 			handleEvent(s, message, &WsListenKeyExpiredEvent{}, handler.OnListenKeyExpired, handler.OnError)
 		default:
@@ -58,6 +60,7 @@ type UserDataHandler interface {
 	OnAccountUpdate(message *WsAccountUpdateEvent)
 	OnOrderTradeUpdate(message *WsOrderTradeUpdateEvent)
 	OnAccountConfigUpdate(message *WsAccountConfigUpdateEvent)
+	OnMarginCall(message *WsMarginCallEvent)
 	OnListenKeyExpired(message *WsListenKeyExpiredEvent)
 	OnError(err error)
 }
@@ -148,6 +151,23 @@ type WsAccountConfigUpdateEvent struct {
 	UserAccountUpdate    *WsUserAccountUpdate    `json:"u"`
 }
 
+type WsMarginCallEvent struct {
+	WsBaseEvent
+	CrossWalletBalance decimal.Decimal        `json:"cw"`
+	Positions          []WsMarginCallPosition `json:"p"`
+}
+
+type WsMarginCallPosition struct {
+	Symbol            string          `json:"s"`
+	PositionSide      PositionSide    `json:"ps"`
+	PositionAmount    decimal.Decimal `json:"pa"`
+	MarginType        MarginType      `json:"mt"`
+	IsolatedWallet    decimal.Decimal `json:"iw"`
+	MarkPrice         decimal.Decimal `json:"mp"`
+	UnrealizedPnL     decimal.Decimal `json:"up"`
+	MaintenanceMargin decimal.Decimal `json:"mm"`
+}
+
 type WsSymbolLeverageUpdate struct {
 	Symbol   string `json:"s"`
 	Leverage int64  `json:"l"`
@@ -194,5 +214,6 @@ const (
 	AccountUpdate       UserDataEventType = "ACCOUNT_UPDATE"
 	OrderTradeUpdate    UserDataEventType = "ORDER_TRADE_UPDATE"
 	AccountConfigUpdate UserDataEventType = "ACCOUNT_CONFIG_UPDATE"
+	MarginCall          UserDataEventType = "MARGIN_CALL"
 	ListenKeyExpired    UserDataEventType = "listenKeyExpired"
 )
