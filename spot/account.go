@@ -134,33 +134,6 @@ type TransferResponse struct {
 	Status string `json:"status"`
 }
 
-type SendToAddressService struct {
-	c *SpotClient
-
-	params map[string]string
-}
-
-func (c *SpotClient) NewSendToAddressService(amount float64, asset string, toAddress string) *SendToAddressService {
-	return &SendToAddressService{
-		c: c,
-		params: map[string]string{
-			"amount":    strconv.FormatFloat(amount, 'f', -1, 64),
-			"asset":     asset,
-			"toAddress": toAddress,
-		},
-	}
-}
-
-func (s *SendToAddressService) SetClientTranId(clientTranId string) *SendToAddressService {
-	s.params["clientTranId"] = clientTranId
-	return s
-}
-
-func (s *SendToAddressService) Do(ctx context.Context) (*TransferResponse, error) {
-	req := request.Post(s.c, ctx, "/api/v1/asset/sendToAddress", s.params).WithSignature()
-	return request.Do[TransferResponse](req)
-}
-
 type GetWithdrawFeeService struct {
 	c *SpotClient
 
