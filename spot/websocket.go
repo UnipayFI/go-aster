@@ -11,6 +11,13 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+type DiffDepthSpeed string
+
+const (
+	// DiffDepthSpeed100ms represents the `@100ms` suffix.
+	DiffDepthSpeed100ms DiffDepthSpeed = "100ms"
+)
+
 type subscribeAggTradeService struct {
 	c      *SpotWebSocketClient
 	symbol string
@@ -131,15 +138,15 @@ type WsMiniTickerResponse struct {
 	QuoteVolume decimal.Decimal `json:"q"`
 }
 
-type subscribeAllMiniTickerService struct {
+type subscribeAllMiniTickersService struct {
 	c *SpotWebSocketClient
 }
 
-func (c *SpotWebSocketClient) NewSubscribeAllMiniTickerService() *subscribeAllMiniTickerService {
-	return &subscribeAllMiniTickerService{c: c}
+func (c *SpotWebSocketClient) NewSubscribeAllMiniTickersService() *subscribeAllMiniTickersService {
+	return &subscribeAllMiniTickersService{c: c}
 }
 
-func (s *subscribeAllMiniTickerService) Do(ctx context.Context, handler func(message *[]WsMiniTickerResponse, err error)) (done chan<- struct{}, stop <-chan struct{}, err error) {
+func (s *subscribeAllMiniTickersService) Do(ctx context.Context, handler func(message *[]WsMiniTickerResponse, err error)) (done chan<- struct{}, stop <-chan struct{}, err error) {
 	url := common.WEBSOCKET_STREAM_SEPARATOR + "!miniTicker@arr"
 	return request.Subscribe(ctx, s.c, url, handler)
 }
@@ -179,15 +186,15 @@ type WsTickerResponse struct {
 	TotalTrades         int64           `json:"n"`
 }
 
-type subscribeAllTickerService struct {
+type subscribeAllTickersService struct {
 	c *SpotWebSocketClient
 }
 
-func (c *SpotWebSocketClient) NewSubscribeAllTickerService() *subscribeAllTickerService {
-	return &subscribeAllTickerService{c: c}
+func (c *SpotWebSocketClient) NewSubscribeAllTickersService() *subscribeAllTickersService {
+	return &subscribeAllTickersService{c: c}
 }
 
-func (s *subscribeAllTickerService) Do(ctx context.Context, handler func(message *[]WsTickerResponse, err error)) (done chan<- struct{}, stop <-chan struct{}, err error) {
+func (s *subscribeAllTickersService) Do(ctx context.Context, handler func(message *[]WsTickerResponse, err error)) (done chan<- struct{}, stop <-chan struct{}, err error) {
 	url := common.WEBSOCKET_STREAM_SEPARATOR + "!ticker@arr"
 	return request.Subscribe(ctx, s.c, url, handler)
 }
@@ -197,7 +204,7 @@ type subscribeBookTickerService struct {
 	symbol string
 }
 
-func (c *SpotWebSocketClient) NewSubscribeBestOrderBookService(symbol string) *subscribeBookTickerService {
+func (c *SpotWebSocketClient) NewSubscribeBookTickerService(symbol string) *subscribeBookTickerService {
 	return &subscribeBookTickerService{c: c, symbol: symbol}
 }
 
@@ -215,15 +222,15 @@ type WsBookTickerResponse struct {
 	BestAskQuantity decimal.Decimal `json:"A"`
 }
 
-type subscribeAllBookTickerService struct {
+type subscribeAllBookTickersService struct {
 	c *SpotWebSocketClient
 }
 
-func (c *SpotWebSocketClient) NewSubscribeAllBookTickerService() *subscribeAllBookTickerService {
-	return &subscribeAllBookTickerService{c: c}
+func (c *SpotWebSocketClient) NewSubscribeAllBookTickersService() *subscribeAllBookTickersService {
+	return &subscribeAllBookTickersService{c: c}
 }
 
-func (s *subscribeAllBookTickerService) Do(ctx context.Context, handler func(message *WsBookTickerResponse, err error)) (done chan<- struct{}, stop <-chan struct{}, err error) {
+func (s *subscribeAllBookTickersService) Do(ctx context.Context, handler func(message *WsBookTickerResponse, err error)) (done chan<- struct{}, stop <-chan struct{}, err error) {
 	url := common.WEBSOCKET_STREAM_SEPARATOR + "!bookTicker"
 	return request.Subscribe(ctx, s.c, url, handler)
 }
@@ -266,22 +273,24 @@ type WsDepthResponse struct {
 	Asks             []PriceSize `json:"a"`
 }
 
-type subscribeIncrementalDepthService struct {
+type SubscribeDiffDepthService struct {
 	c      *SpotWebSocketClient
 	symbol string
 	speed  string
 }
 
-// speed: 100ms
-func (c *SpotWebSocketClient) NewSubscribeIncrementalDepthService(symbol string, speed ...string) *subscribeIncrementalDepthService {
-	s := subscribeIncrementalDepthService{c: c, symbol: symbol}
-	if len(speed) > 0 {
-		s.speed = "@" + speed[0]
-	}
+func (c *SpotWebSocketClient) NewSubscribeDiffDepthService(symbol string) *SubscribeDiffDepthService {
+	s := SubscribeDiffDepthService{c: c, symbol: symbol}
 	return &s
 }
 
-func (s *subscribeIncrementalDepthService) Do(ctx context.Context, handler func(message *WsIncrementalDepthResponse, err error)) (done chan<- struct{}, stop <-chan struct{}, err error) {
+// Default update frequency is 1000ms per docs when Speed is not set.
+func (s *SubscribeDiffDepthService) Speed(speed DiffDepthSpeed) *SubscribeDiffDepthService {
+	s.speed = "@" + string(speed)
+	return s
+}
+
+func (s *SubscribeDiffDepthService) Do(ctx context.Context, handler func(message *WsIncrementalDepthResponse, err error)) (done chan<- struct{}, stop <-chan struct{}, err error) {
 	url := common.WEBSOCKET_STREAM_SEPARATOR + strings.ToLower(s.symbol) + "@depth" + s.speed
 	return request.Subscribe(ctx, s.c, url, handler)
 }

@@ -163,7 +163,6 @@ type PositionRiskResponse struct {
 	IsolatedMargin   decimal.Decimal `json:"isolatedMargin"`
 	IsAutoAddMargin  string          `json:"isAutoAddMargin"`
 	PositionSide     PositionSide    `json:"positionSide"`
-	NotionalValue    decimal.Decimal `json:"notionalValue"`
 	UpdateTime       time.Time       `json:"updateTime,format:unixmilli"`
 }
 
