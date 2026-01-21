@@ -658,3 +658,23 @@ func (s *CloseListenKeyService) Do(ctx context.Context) error {
 	_, err := request.Do[struct{}](req)
 	return err
 }
+
+type RemainingOpenableNotionalValueService struct {
+	c      *FuturesClient
+	params map[string]string
+}
+
+func (c *FuturesClient) NewRemainingOpenableNotionalValueService(symbol string, leverage int) *RemainingOpenableNotionalValueService {
+	return &RemainingOpenableNotionalValueService{c: c, params: map[string]string{"symbol": symbol, "leverage": strconv.Itoa(leverage)}}
+}
+
+func (s *RemainingOpenableNotionalValueService) Do(ctx context.Context) (float64, error) {
+	req := request.Get(ctx, s.c, "/fapi/v1/remainingOpenableNotionalValue", s.params).WithSignature()
+	resp, err := request.Do[struct {
+		RemainingOpenableNotionalValue float64 `json:"remainingOpenableNotionalValue"`
+	}](req)
+	if err != nil {
+		return 0, err
+	}
+	return resp.RemainingOpenableNotionalValue, nil
+}
