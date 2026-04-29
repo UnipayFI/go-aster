@@ -5,44 +5,43 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/UnipayFI/go-aster/request"
+	"github.com/UnipayFI/go-aster/v3/request"
 	"github.com/shopspring/decimal"
 )
 
+// GetAccountService -- GET /api/v3/account (USER_DATA)
 type GetAccountService struct {
 	c *SpotClient
-
-	params map[string]string
 }
 
 func (c *SpotClient) NewGetAccountService() *GetAccountService {
-	return &GetAccountService{c: c, params: map[string]string{}}
+	return &GetAccountService{c: c}
 }
 
-func (s *GetAccountService) Do(ctx context.Context) (*AccountResponse, error) {
-	req := request.Get(ctx, s.c, "/api/v1/account", s.params).WithSignature()
-	return request.Do[AccountResponse](req)
+func (s *GetAccountService) Do(ctx context.Context) (*AccountInfo, error) {
+	req := request.Get(ctx, s.c, "/api/v3/account").WithSignature()
+	return request.Do[AccountInfo](req)
 }
 
-type AccountResponse struct {
-	FeeTier      int              `json:"feeTier"`
-	CanTrade     bool             `json:"canTrade"`
-	CanDeposit   bool             `json:"canDeposit"`
-	CanWithdraw  bool             `json:"canWithdraw"`
-	CanBurnAsset bool             `json:"canBurnAsset"`
-	UpdateTime   time.Time        `json:"updateTime,format:unixnano"`
-	Balances     []AccountBalance `json:"balances"`
+type AccountInfo struct {
+	FeeTier      int64     `json:"feeTier"`
+	CanTrade     bool      `json:"canTrade"`
+	CanDeposit   bool      `json:"canDeposit"`
+	CanWithdraw  bool      `json:"canWithdraw"`
+	CanBurnAsset bool      `json:"canBurnAsset"`
+	UpdateTime   int64     `json:"updateTime"`
+	Balances     []Balance `json:"balances"`
 }
 
-type AccountBalance struct {
+type Balance struct {
 	Asset  string          `json:"asset"`
 	Free   decimal.Decimal `json:"free"`
 	Locked decimal.Decimal `json:"locked"`
 }
 
+// GetUserTradesService -- GET /api/v3/userTrades (USER_DATA)
 type GetUserTradesService struct {
-	c *SpotClient
-
+	c      *SpotClient
 	params map[string]string
 }
 
@@ -55,23 +54,23 @@ func (s *GetUserTradesService) SetSymbol(symbol string) *GetUserTradesService {
 	return s
 }
 
-func (s *GetUserTradesService) SetOrderId(orderId int64) *GetUserTradesService {
-	s.params["orderId"] = strconv.FormatInt(orderId, 10)
+func (s *GetUserTradesService) SetOrderId(id int64) *GetUserTradesService {
+	s.params["orderId"] = strconv.FormatInt(id, 10)
 	return s
 }
 
-func (s *GetUserTradesService) SetStartTime(startTime time.Time) *GetUserTradesService {
-	s.params["startTime"] = strconv.FormatInt(startTime.UnixMilli(), 10)
+func (s *GetUserTradesService) SetStartTime(t time.Time) *GetUserTradesService {
+	s.params["startTime"] = strconv.FormatInt(t.UnixMilli(), 10)
 	return s
 }
 
-func (s *GetUserTradesService) SetEndTime(endTime time.Time) *GetUserTradesService {
-	s.params["endTime"] = strconv.FormatInt(endTime.UnixMilli(), 10)
+func (s *GetUserTradesService) SetEndTime(t time.Time) *GetUserTradesService {
+	s.params["endTime"] = strconv.FormatInt(t.UnixMilli(), 10)
 	return s
 }
 
-func (s *GetUserTradesService) SetFromId(fromId int64) *GetUserTradesService {
-	s.params["fromId"] = strconv.FormatInt(fromId, 10)
+func (s *GetUserTradesService) SetFromId(id int64) *GetUserTradesService {
+	s.params["fromId"] = strconv.FormatInt(id, 10)
 	return s
 }
 
@@ -80,19 +79,19 @@ func (s *GetUserTradesService) SetLimit(limit int) *GetUserTradesService {
 	return s
 }
 
-func (s *GetUserTradesService) Do(ctx context.Context) ([]UserTradeResponse, error) {
-	req := request.Get(ctx, s.c, "/api/v1/userTrades", s.params).WithSignature()
-	trades, err := request.Do[[]UserTradeResponse](req)
+func (s *GetUserTradesService) Do(ctx context.Context) ([]UserTrade, error) {
+	req := request.Get(ctx, s.c, "/api/v3/userTrades", s.params).WithSignature()
+	resp, err := request.Do[[]UserTrade](req)
 	if err != nil {
 		return nil, err
 	}
-	return *trades, nil
+	return *resp, nil
 }
 
-type UserTradeResponse struct {
+type UserTrade struct {
 	Symbol          string          `json:"symbol"`
-	Id              int64           `json:"id"`
-	OrderId         int64           `json:"orderId"`
+	ID              int64           `json:"id"`
+	OrderID         int64           `json:"orderId"`
 	Side            OrderSide       `json:"side"`
 	Price           decimal.Decimal `json:"price"`
 	Qty             decimal.Decimal `json:"qty"`
@@ -100,58 +99,54 @@ type UserTradeResponse struct {
 	Commission      decimal.Decimal `json:"commission"`
 	CommissionAsset string          `json:"commissionAsset"`
 	Time            time.Time       `json:"time,format:unixmilli"`
-	CounterpartyId  int64           `json:"counterpartyId"`
-	CreateUpdateId  *int64          `json:"createUpdateId"`
+	CounterpartyID  int64           `json:"counterpartyId"`
+	CreateUpdateID  *int64          `json:"createUpdateId"`
 	Maker           bool            `json:"maker"`
 	Buyer           bool            `json:"buyer"`
 }
 
-type WalletTransferService struct {
-	c *SpotClient
-
+// PerpSpotTransferService -- POST /api/v3/asset/wallet/transfer (TRADE)
+//
+// Move funds between the spot wallet and the perpetual (futures) wallet.
+type PerpSpotTransferService struct {
+	c      *SpotClient
 	params map[string]string
 }
 
-func (c *SpotClient) NewWalletTransferService(amount float64, asset string, clientTranId string, kindType TransferType) *WalletTransferService {
-	return &WalletTransferService{
-		c: c,
-		params: map[string]string{
-			"amount":       strconv.FormatFloat(amount, 'f', -1, 64),
-			"asset":        asset,
-			"clientTranId": clientTranId,
-			"kindType":     string(kindType),
-		},
-	}
+func (c *SpotClient) NewPerpSpotTransferService(asset string, amount decimal.Decimal, kind TransferKindType, clientTranID string) *PerpSpotTransferService {
+	return &PerpSpotTransferService{c: c, params: map[string]string{
+		"amount":       amount.String(),
+		"asset":        asset,
+		"clientTranId": clientTranID,
+		"kindType":     string(kind),
+	}}
 }
 
-func (s *WalletTransferService) Do(ctx context.Context) (*TransferResponse, error) {
-	req := request.Post(s.c, ctx, "/api/v1/asset/wallet/transfer", s.params).WithSignature()
+func (s *PerpSpotTransferService) Do(ctx context.Context) (*TransferResponse, error) {
+	req := request.Post(s.c, ctx, "/api/v3/asset/wallet/transfer", s.params).WithSignature()
 	return request.Do[TransferResponse](req)
 }
 
 type TransferResponse struct {
-	TranId int64  `json:"tranId"`
+	TranID int64  `json:"tranId"`
 	Status string `json:"status"`
 }
 
+// GetWithdrawFeeService -- GET /api/v3/aster/withdraw/estimateFee (NONE)
 type GetWithdrawFeeService struct {
-	c *SpotClient
-
+	c      *SpotClient
 	params map[string]string
 }
 
-func (c *SpotClient) NewGetWithdrawFeeService(chainId string, asset string) *GetWithdrawFeeService {
-	return &GetWithdrawFeeService{
-		c: c,
-		params: map[string]string{
-			"chainId": chainId,
-			"asset":   asset,
-		},
-	}
+func (c *SpotClient) NewGetWithdrawFeeService(chainID string, asset string) *GetWithdrawFeeService {
+	return &GetWithdrawFeeService{c: c, params: map[string]string{
+		"chainId": chainID,
+		"asset":   asset,
+	}}
 }
 
 func (s *GetWithdrawFeeService) Do(ctx context.Context) (*WithdrawFeeResponse, error) {
-	req := request.Get(ctx, s.c, "/api/v1/aster/withdraw/estimateFee", s.params)
+	req := request.Get(ctx, s.c, "/api/v3/aster/withdraw/estimateFee", s.params)
 	return request.Do[WithdrawFeeResponse](req)
 }
 
@@ -161,154 +156,39 @@ type WithdrawFeeResponse struct {
 	GasUsdValue decimal.Decimal `json:"gasUsdValue"`
 }
 
+// WithdrawService -- POST /api/v3/aster/user-withdraw (USER_DATA)
+//
+// Withdraws require a separately-signed `userSignature` parameter generated
+// from a different EIP-712 typed-data structure (the "Action/Withdraw" type
+// with verifyingContract=ZeroAddress, name="Aster"). Because the typed-data
+// schema is unrelated to the request-signing flow, the caller must compute
+// userSignature themselves -- see the doc snippet at
+// /tmp/api-docs/V3(Recommended)/EN/aster-finance-spot-api-v3.md lines
+// 1430-1465 for the exact field set. The SDK only attaches the standard V3
+// request signature.
 type WithdrawService struct {
-	c *SpotClient
-
+	c      *SpotClient
 	params map[string]string
 }
 
-func (c *SpotClient) NewWithdrawService(chainId string, asset string, amount string, fee string, receiver string, nonce string, userSignature string) *WithdrawService {
-	return &WithdrawService{
-		c: c,
-		params: map[string]string{
-			"chainId":       chainId,
-			"asset":         asset,
-			"amount":        amount,
-			"fee":           fee,
-			"receiver":      receiver,
-			"nonce":         nonce,
-			"userSignature": userSignature,
-		},
-	}
+func (c *SpotClient) NewWithdrawService(chainID, asset, amount, fee, receiver, nonce, userSignature string) *WithdrawService {
+	return &WithdrawService{c: c, params: map[string]string{
+		"chainId":       chainID,
+		"asset":         asset,
+		"amount":        amount,
+		"fee":           fee,
+		"receiver":      receiver,
+		"nonce":         nonce,
+		"userSignature": userSignature,
+	}}
 }
 
 func (s *WithdrawService) Do(ctx context.Context) (*WithdrawResponse, error) {
-	req := request.Post(s.c, ctx, "/api/v1/aster/user-withdraw", s.params).WithSignature()
+	req := request.Post(s.c, ctx, "/api/v3/aster/user-withdraw", s.params).WithSignature()
 	return request.Do[WithdrawResponse](req)
 }
 
 type WithdrawResponse struct {
-	WithdrawId string `json:"withdrawId"`
+	WithdrawID string `json:"withdrawId"`
 	Hash       string `json:"hash"`
-}
-
-type GetNonceService struct {
-	c *SpotClient
-
-	params map[string]string
-}
-
-func (c *SpotClient) NewGetNonceService(address string, userOperationType string) *GetNonceService {
-	return &GetNonceService{
-		c: c,
-		params: map[string]string{
-			"address":           address,
-			"userOperationType": userOperationType,
-		},
-	}
-}
-
-func (s *GetNonceService) SetNetwork(network string) *GetNonceService {
-	s.params["network"] = network
-	return s
-}
-
-func (s *GetNonceService) Do(ctx context.Context) (*int64, error) {
-	req := request.Post(s.c, ctx, "/api/v1/getNonce", s.params)
-	return request.Do[int64](req)
-}
-
-type CreateApiKeyService struct {
-	c *SpotClient
-
-	params map[string]string
-}
-
-func (c *SpotClient) NewCreateApiKeyService(address string, userOperationType string, userSignature string, desc string) *CreateApiKeyService {
-	return &CreateApiKeyService{
-		c: c,
-		params: map[string]string{
-			"address":           address,
-			"userOperationType": userOperationType,
-			"userSignature":     userSignature,
-			"desc":              desc,
-		},
-	}
-}
-
-func (s *CreateApiKeyService) SetNetwork(network string) *CreateApiKeyService {
-	s.params["network"] = network
-	return s
-}
-
-func (s *CreateApiKeyService) SetApikeyIP(apikeyIP string) *CreateApiKeyService {
-	s.params["apikeyIP"] = apikeyIP
-	return s
-}
-
-func (s *CreateApiKeyService) Do(ctx context.Context) (*CreateApiKeyResponse, error) {
-	req := request.Post(s.c, ctx, "/api/v1/createApiKey", s.params)
-	return request.Do[CreateApiKeyResponse](req)
-}
-
-type CreateApiKeyResponse struct {
-	ApiKey    string `json:"apiKey"`
-	ApiSecret string `json:"apiSecret"`
-}
-
-type CreateListenKeyService struct {
-	c *SpotClient
-}
-
-func (c *SpotClient) NewCreateListenKeyService() *CreateListenKeyService {
-	return &CreateListenKeyService{c: c}
-}
-
-func (s *CreateListenKeyService) Do(ctx context.Context) (string, error) {
-	req := request.Post(s.c, ctx, "/api/v1/listenKey").WithApiKey()
-	resp, err := request.Do[struct {
-		ListenKey string `json:"listenKey"`
-	}](req)
-	if err != nil {
-		return "", err
-	}
-	return resp.ListenKey, nil
-}
-
-type ExtendListenKeyService struct {
-	c *SpotClient
-
-	params map[string]string
-}
-
-func (c *SpotClient) NewExtendListenKeyService(listenKey string) *ExtendListenKeyService {
-	return &ExtendListenKeyService{
-		c:      c,
-		params: map[string]string{"listenKey": listenKey},
-	}
-}
-
-func (s *ExtendListenKeyService) Do(ctx context.Context) error {
-	req := request.Put(ctx, s.c, "/api/v1/listenKey", s.params).WithApiKey()
-	_, err := request.Do[struct{}](req)
-	return err
-}
-
-type CloseListenKeyService struct {
-	c *SpotClient
-
-	params map[string]string
-}
-
-func (c *SpotClient) NewCloseListenKeyService(listenKey string) *CloseListenKeyService {
-	return &CloseListenKeyService{
-		c:      c,
-		params: map[string]string{"listenKey": listenKey},
-	}
-}
-
-func (s *CloseListenKeyService) Do(ctx context.Context) error {
-	req := request.Delete(ctx, s.c, "/api/v1/listenKey", s.params).WithApiKey()
-	_, err := request.Do[struct{}](req)
-	return err
 }

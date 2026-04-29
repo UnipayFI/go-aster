@@ -6,16 +6,21 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/UnipayFI/go-aster/client"
+	"github.com/UnipayFI/go-aster/v3/client"
 	"github.com/go-resty/resty/v2"
 )
 
+// Do executes the request and decodes the response body into *T. Following
+// the official V3 Python demo (send_by_url), all parameters -- including the
+// signature -- are sent as URL query string for every method (GET/POST/PUT/
+// DELETE); the body is left empty.
 func Do[T any](r *Request) (resp *T, err error) {
 	if r.err != nil {
 		return nil, r.err
 	}
 
-	r.client.GetLogger().Debugf("request: %s %s", r.r.Method, r.r.URL)
+	r.r.URL = r.fullURL()
+	r.client.GetLogger().Debugf("request: %s %s", r.method, r.r.URL)
 	defer func() {
 		if err == nil {
 			return
@@ -37,6 +42,28 @@ func Do[T any](r *Request) (resp *T, err error) {
 		return nil, handlerAPIError(r, response)
 	}
 	return resp, nil
+}
+
+// DoRaw is like Do but returns the raw response body without JSON decoding.
+// Used by endpoints that return non-JSON or non-uniform shapes (rare).
+func DoRaw(r *Request) ([]byte, error) {
+	if r.err != nil {
+		return nil, r.err
+	}
+	r.r.URL = r.fullURL()
+	r.client.GetLogger().Debugf("request: %s %s", r.method, r.r.URL)
+
+	response, err := r.r.Send()
+	if err != nil {
+		return nil, err
+	}
+	defer response.RawBody().Close()
+
+	handlerRateLimit(r, response)
+	if response.IsError() {
+		return nil, handlerAPIError(r, response)
+	}
+	return response.Body(), nil
 }
 
 func handlerRateLimit(r *Request, response *resty.Response) {

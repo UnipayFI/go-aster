@@ -2,307 +2,380 @@ package spot
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"time"
 
-	"github.com/UnipayFI/go-aster/common"
-	"github.com/UnipayFI/go-aster/request"
+	"github.com/UnipayFI/go-aster/v3/common"
+	"github.com/UnipayFI/go-aster/v3/request"
 	"github.com/shopspring/decimal"
 )
 
-type DiffDepthSpeed string
+// streamPath builds a single-stream URL ("/ws/<symbol>@<event>"). Aster
+// requires lowercase symbols, but event suffixes like "aggTrade" or
+// "bookTicker" are case-sensitive — only the segment before the first '@'
+// gets lowercased.
+func streamPath(stream string) string {
+	if i := strings.Index(stream, "@"); i >= 0 {
+		return common.WEBSOCKET_STREAM_SEPARATOR + strings.ToLower(stream[:i]) + stream[i:]
+	}
+	return common.WEBSOCKET_STREAM_SEPARATOR + strings.ToLower(stream)
+}
 
-const (
-	// DiffDepthSpeed100ms represents the `@100ms` suffix.
-	DiffDepthSpeed100ms DiffDepthSpeed = "100ms"
-)
-
-type subscribeAggTradeService struct {
+// SubscribeAggTradeService -- <symbol>@aggTrade (real-time aggregated trades)
+type SubscribeAggTradeService struct {
 	c      *SpotWebSocketClient
 	symbol string
 }
 
-func (c *SpotWebSocketClient) NewSubscribeAggTradeService(symbol string) *subscribeAggTradeService {
-	return &subscribeAggTradeService{c: c, symbol: symbol}
+func (c *SpotWebSocketClient) NewSubscribeAggTradeService(symbol string) *SubscribeAggTradeService {
+	return &SubscribeAggTradeService{c: c, symbol: symbol}
 }
 
-func (s *subscribeAggTradeService) Do(ctx context.Context, handler func(message *WsAggTradeResponse, err error)) (done chan<- struct{}, stop <-chan struct{}, err error) {
-	url := common.WEBSOCKET_STREAM_SEPARATOR + strings.ToLower(s.symbol) + "@aggTrade"
-	return request.Subscribe(ctx, s.c, url, handler)
+func (s *SubscribeAggTradeService) Do(ctx context.Context, cb func(*WsAggTradeEvent, error)) (chan<- struct{}, <-chan struct{}, error) {
+	return request.Subscribe[WsAggTradeEvent](ctx, s.c, streamPath(s.symbol+"@aggTrade"), cb)
 }
 
-type WsAggTradeResponse struct {
+type WsAggTradeEvent struct {
 	EventType    string          `json:"e"`
 	EventTime    time.Time       `json:"E,format:unixmilli"`
 	Symbol       string          `json:"s"`
-	AggTradeId   int64           `json:"a"`
+	AggTradeID   int64           `json:"a"`
 	Price        decimal.Decimal `json:"p"`
 	Quantity     decimal.Decimal `json:"q"`
-	FirstTradeId int64           `json:"f"`
-	LastTradeId  int64           `json:"l"`
+	FirstTradeID int64           `json:"f"`
+	LastTradeID  int64           `json:"l"`
 	TradeTime    time.Time       `json:"T,format:unixmilli"`
 	IsBuyerMaker bool            `json:"m"`
 }
 
-type subscribeTradeService struct {
+// SubscribeTradeService -- <symbol>@trade (tick-by-tick raw trades)
+type SubscribeTradeService struct {
 	c      *SpotWebSocketClient
 	symbol string
 }
 
-func (c *SpotWebSocketClient) NewSubscribeTradeService(symbol string) *subscribeTradeService {
-	return &subscribeTradeService{c: c, symbol: symbol}
+func (c *SpotWebSocketClient) NewSubscribeTradeService(symbol string) *SubscribeTradeService {
+	return &SubscribeTradeService{c: c, symbol: symbol}
 }
 
-func (s *subscribeTradeService) Do(ctx context.Context, handler func(message *WsTradeResponse, err error)) (done chan<- struct{}, stop <-chan struct{}, err error) {
-	url := common.WEBSOCKET_STREAM_SEPARATOR + strings.ToLower(s.symbol) + "@trade"
-	return request.Subscribe(ctx, s.c, url, handler)
+func (s *SubscribeTradeService) Do(ctx context.Context, cb func(*WsTradeEvent, error)) (chan<- struct{}, <-chan struct{}, error) {
+	return request.Subscribe[WsTradeEvent](ctx, s.c, streamPath(s.symbol+"@trade"), cb)
 }
 
-type WsTradeResponse struct {
+type WsTradeEvent struct {
 	EventType    string          `json:"e"`
 	EventTime    time.Time       `json:"E,format:unixmilli"`
 	Symbol       string          `json:"s"`
-	TradeId      int64           `json:"t"`
+	TradeID      int64           `json:"t"`
 	Price        decimal.Decimal `json:"p"`
 	Quantity     decimal.Decimal `json:"q"`
 	TradeTime    time.Time       `json:"T,format:unixmilli"`
 	IsBuyerMaker bool            `json:"m"`
 }
 
-type subscribeKlineService struct {
+// SubscribeKlineService -- <symbol>@kline_<interval>
+type SubscribeKlineService struct {
 	c        *SpotWebSocketClient
 	symbol   string
 	interval KlineInterval
 }
 
-func (c *SpotWebSocketClient) NewSubscribeKlineService(symbol string, interval KlineInterval) *subscribeKlineService {
-	return &subscribeKlineService{c: c, symbol: symbol, interval: interval}
+func (c *SpotWebSocketClient) NewSubscribeKlineService(symbol string, interval KlineInterval) *SubscribeKlineService {
+	return &SubscribeKlineService{c: c, symbol: symbol, interval: interval}
 }
 
-func (s *subscribeKlineService) Do(ctx context.Context, handler func(message *WsKlineResponse, err error)) (done chan<- struct{}, stop <-chan struct{}, err error) {
-	url := common.WEBSOCKET_STREAM_SEPARATOR + strings.ToLower(s.symbol) + "@kline_" + string(s.interval)
-	return request.Subscribe(ctx, s.c, url, handler)
+func (s *SubscribeKlineService) Do(ctx context.Context, cb func(*WsKlineEvent, error)) (chan<- struct{}, <-chan struct{}, error) {
+	return request.Subscribe[WsKlineEvent](ctx, s.c, streamPath(s.symbol+"@kline_"+string(s.interval)), cb)
 }
 
-type WsKlineResponse struct {
-	EventType string    `json:"e"`
+type WsKlineEvent struct {
+	EventType string  `json:"e"`
 	EventTime time.Time `json:"E,format:unixmilli"`
-	Symbol    string    `json:"s"`
-	Kline     WsKline   `json:"k"`
+	Symbol    string  `json:"s"`
+	Kline     WsKline `json:"k"`
 }
 
 type WsKline struct {
 	StartTime                time.Time       `json:"t,format:unixmilli"`
-	EndTime                  time.Time       `json:"T,format:unixmilli"`
+	CloseTime                time.Time       `json:"T,format:unixmilli"`
 	Symbol                   string          `json:"s"`
 	Interval                 KlineInterval   `json:"i"`
-	FirstTradeId             int64           `json:"f"`
-	LastTradeId              int64           `json:"L"`
-	OpenPrice                decimal.Decimal `json:"o"`
-	ClosePrice               decimal.Decimal `json:"c"`
-	HighPrice                decimal.Decimal `json:"h"`
-	LowPrice                 decimal.Decimal `json:"l"`
+	FirstTradeID             int64           `json:"f"`
+	LastTradeID              int64           `json:"L"`
+	Open                     decimal.Decimal `json:"o"`
+	Close                    decimal.Decimal `json:"c"`
+	High                     decimal.Decimal `json:"h"`
+	Low                      decimal.Decimal `json:"l"`
 	Volume                   decimal.Decimal `json:"v"`
-	TradeNum                 int64           `json:"n"`
+	NumberOfTrades           int64           `json:"n"`
 	IsClosed                 bool            `json:"x"`
 	QuoteAssetVolume         decimal.Decimal `json:"q"`
 	TakerBuyBaseAssetVolume  decimal.Decimal `json:"V"`
 	TakerBuyQuoteAssetVolume decimal.Decimal `json:"Q"`
-	BuyerBaseAssetVolume     decimal.Decimal `json:"B"`
 }
 
-type subscribeMiniTickerService struct {
+// SubscribeMiniTickerService -- <symbol>@miniTicker
+type SubscribeMiniTickerService struct {
 	c      *SpotWebSocketClient
 	symbol string
 }
 
-func (c *SpotWebSocketClient) NewSubscribeMiniTickerService(symbol string) *subscribeMiniTickerService {
-	return &subscribeMiniTickerService{c: c, symbol: symbol}
+func (c *SpotWebSocketClient) NewSubscribeMiniTickerService(symbol string) *SubscribeMiniTickerService {
+	return &SubscribeMiniTickerService{c: c, symbol: symbol}
 }
 
-func (s *subscribeMiniTickerService) Do(ctx context.Context, handler func(message *WsMiniTickerResponse, err error)) (done chan<- struct{}, stop <-chan struct{}, err error) {
-	url := common.WEBSOCKET_STREAM_SEPARATOR + strings.ToLower(s.symbol) + "@miniTicker"
-	return request.Subscribe(ctx, s.c, url, handler)
+func (s *SubscribeMiniTickerService) Do(ctx context.Context, cb func(*WsMiniTickerEvent, error)) (chan<- struct{}, <-chan struct{}, error) {
+	return request.Subscribe[WsMiniTickerEvent](ctx, s.c, streamPath(s.symbol+"@miniTicker"), cb)
 }
 
-type WsMiniTickerResponse struct {
-	EventType   string          `json:"e"`
-	EventTime   time.Time       `json:"E,format:unixmilli"`
-	Symbol      string          `json:"s"`
-	ClosePrice  decimal.Decimal `json:"c"`
-	OpenPrice   decimal.Decimal `json:"o"`
-	HighPrice   decimal.Decimal `json:"h"`
-	LowPrice    decimal.Decimal `json:"l"`
-	Volume      decimal.Decimal `json:"v"`
-	QuoteVolume decimal.Decimal `json:"q"`
+type WsMiniTickerEvent struct {
+	EventType        string          `json:"e"`
+	EventTime        time.Time       `json:"E,format:unixmilli"`
+	Symbol           string          `json:"s"`
+	ClosePrice       decimal.Decimal `json:"c"`
+	OpenPrice        decimal.Decimal `json:"o"`
+	HighPrice        decimal.Decimal `json:"h"`
+	LowPrice         decimal.Decimal `json:"l"`
+	BaseAssetVolume  decimal.Decimal `json:"v"`
+	QuoteAssetVolume decimal.Decimal `json:"q"`
 }
 
-type subscribeAllMiniTickersService struct {
+// SubscribeAllMiniTickersService -- !miniTicker@arr (all symbols)
+type SubscribeAllMiniTickersService struct {
 	c *SpotWebSocketClient
 }
 
-func (c *SpotWebSocketClient) NewSubscribeAllMiniTickersService() *subscribeAllMiniTickersService {
-	return &subscribeAllMiniTickersService{c: c}
+func (c *SpotWebSocketClient) NewSubscribeAllMiniTickersService() *SubscribeAllMiniTickersService {
+	return &SubscribeAllMiniTickersService{c: c}
 }
 
-func (s *subscribeAllMiniTickersService) Do(ctx context.Context, handler func(message *[]WsMiniTickerResponse, err error)) (done chan<- struct{}, stop <-chan struct{}, err error) {
-	url := common.WEBSOCKET_STREAM_SEPARATOR + "!miniTicker@arr"
-	return request.Subscribe(ctx, s.c, url, handler)
+func (s *SubscribeAllMiniTickersService) Do(ctx context.Context, cb func(*[]WsMiniTickerEvent, error)) (chan<- struct{}, <-chan struct{}, error) {
+	return request.Subscribe[[]WsMiniTickerEvent](ctx, s.c, streamPath("!miniTicker@arr"), cb)
 }
 
-type subscribeTickerService struct {
+// SubscribeTickerService -- <symbol>@ticker (full 24h ticker)
+type SubscribeTickerService struct {
 	c      *SpotWebSocketClient
 	symbol string
 }
 
-func (c *SpotWebSocketClient) NewSubscribeTickerService(symbol string) *subscribeTickerService {
-	return &subscribeTickerService{c: c, symbol: symbol}
+func (c *SpotWebSocketClient) NewSubscribeTickerService(symbol string) *SubscribeTickerService {
+	return &SubscribeTickerService{c: c, symbol: symbol}
 }
 
-func (s *subscribeTickerService) Do(ctx context.Context, handler func(message *WsTickerResponse, err error)) (done chan<- struct{}, stop <-chan struct{}, err error) {
-	url := common.WEBSOCKET_STREAM_SEPARATOR + strings.ToLower(s.symbol) + "@ticker"
-	return request.Subscribe(ctx, s.c, url, handler)
+func (s *SubscribeTickerService) Do(ctx context.Context, cb func(*WsTickerEvent, error)) (chan<- struct{}, <-chan struct{}, error) {
+	return request.Subscribe[WsTickerEvent](ctx, s.c, streamPath(s.symbol+"@ticker"), cb)
 }
 
-type WsTickerResponse struct {
-	EventType           string          `json:"e"`
-	EventTime           time.Time       `json:"E,format:unixmilli"`
-	Symbol              string          `json:"s"`
-	PriceChange         decimal.Decimal `json:"p"`
-	PriceChangePercent  decimal.Decimal `json:"P"`
-	WeightedAvgPrice    decimal.Decimal `json:"w"`
-	LastPrice           decimal.Decimal `json:"c"`
-	LastQuantity        decimal.Decimal `json:"Q"`
-	OpenPrice           decimal.Decimal `json:"o"`
-	HighPrice           decimal.Decimal `json:"h"`
-	LowPrice            decimal.Decimal `json:"l"`
-	Volume              decimal.Decimal `json:"v"`
-	QuoteVolume         decimal.Decimal `json:"q"`
-	StatisticsOpenTime  time.Time       `json:"O,format:unixmilli"`
-	StatisticsCloseTime time.Time       `json:"C,format:unixmilli"`
-	FirstTradeId        int64           `json:"F"`
-	LastTradeId         int64           `json:"L"`
-	TotalTrades         int64           `json:"n"`
+type WsTickerEvent struct {
+	EventType          string          `json:"e"`
+	EventTime          time.Time       `json:"E,format:unixmilli"`
+	Symbol             string          `json:"s"`
+	PriceChange        decimal.Decimal `json:"p"`
+	PriceChangePercent decimal.Decimal `json:"P"`
+	WeightedAvgPrice   decimal.Decimal `json:"w"`
+	LastPrice          decimal.Decimal `json:"c"`
+	LastQty            decimal.Decimal `json:"Q"`
+	OpenPrice          decimal.Decimal `json:"o"`
+	HighPrice          decimal.Decimal `json:"h"`
+	LowPrice           decimal.Decimal `json:"l"`
+	BaseAssetVolume    decimal.Decimal `json:"v"`
+	QuoteAssetVolume   decimal.Decimal `json:"q"`
+	StatsOpenTime      time.Time       `json:"O,format:unixmilli"`
+	StatsCloseTime     time.Time       `json:"C,format:unixmilli"`
+	FirstTradeID       int64           `json:"F"`
+	LastTradeID        int64           `json:"L"`
+	TotalTradeCount    int64           `json:"n"`
 }
 
-type subscribeAllTickersService struct {
+// SubscribeAllTickersService -- !ticker@arr
+type SubscribeAllTickersService struct {
 	c *SpotWebSocketClient
 }
 
-func (c *SpotWebSocketClient) NewSubscribeAllTickersService() *subscribeAllTickersService {
-	return &subscribeAllTickersService{c: c}
+func (c *SpotWebSocketClient) NewSubscribeAllTickersService() *SubscribeAllTickersService {
+	return &SubscribeAllTickersService{c: c}
 }
 
-func (s *subscribeAllTickersService) Do(ctx context.Context, handler func(message *[]WsTickerResponse, err error)) (done chan<- struct{}, stop <-chan struct{}, err error) {
-	url := common.WEBSOCKET_STREAM_SEPARATOR + "!ticker@arr"
-	return request.Subscribe(ctx, s.c, url, handler)
+func (s *SubscribeAllTickersService) Do(ctx context.Context, cb func(*[]WsTickerEvent, error)) (chan<- struct{}, <-chan struct{}, error) {
+	return request.Subscribe[[]WsTickerEvent](ctx, s.c, streamPath("!ticker@arr"), cb)
 }
 
-type subscribeBookTickerService struct {
+// SubscribeBookTickerService -- <symbol>@bookTicker
+type SubscribeBookTickerService struct {
 	c      *SpotWebSocketClient
 	symbol string
 }
 
-func (c *SpotWebSocketClient) NewSubscribeBookTickerService(symbol string) *subscribeBookTickerService {
-	return &subscribeBookTickerService{c: c, symbol: symbol}
+func (c *SpotWebSocketClient) NewSubscribeBookTickerService(symbol string) *SubscribeBookTickerService {
+	return &SubscribeBookTickerService{c: c, symbol: symbol}
 }
 
-func (s *subscribeBookTickerService) Do(ctx context.Context, handler func(message *WsBookTickerResponse, err error)) (done chan<- struct{}, stop <-chan struct{}, err error) {
-	url := common.WEBSOCKET_STREAM_SEPARATOR + strings.ToLower(s.symbol) + "@bookTicker"
-	return request.Subscribe(ctx, s.c, url, handler)
+func (s *SubscribeBookTickerService) Do(ctx context.Context, cb func(*WsBookTickerEvent, error)) (chan<- struct{}, <-chan struct{}, error) {
+	return request.Subscribe[WsBookTickerEvent](ctx, s.c, streamPath(s.symbol+"@bookTicker"), cb)
 }
 
-type WsBookTickerResponse struct {
-	UpdateID        int64           `json:"u"`
-	Symbol          string          `json:"s"`
-	BestBidPrice    decimal.Decimal `json:"b"`
-	BestBidQuantity decimal.Decimal `json:"B"`
-	BestAskPrice    decimal.Decimal `json:"a"`
-	BestAskQuantity decimal.Decimal `json:"A"`
+type WsBookTickerEvent struct {
+	UpdateID int64           `json:"u"`
+	Symbol   string          `json:"s"`
+	BidPrice decimal.Decimal `json:"b"`
+	BidQty   decimal.Decimal `json:"B"`
+	AskPrice decimal.Decimal `json:"a"`
+	AskQty   decimal.Decimal `json:"A"`
 }
 
-type subscribeAllBookTickersService struct {
+// SubscribeAllBookTickersService -- !bookTicker
+type SubscribeAllBookTickersService struct {
 	c *SpotWebSocketClient
 }
 
-func (c *SpotWebSocketClient) NewSubscribeAllBookTickersService() *subscribeAllBookTickersService {
-	return &subscribeAllBookTickersService{c: c}
+func (c *SpotWebSocketClient) NewSubscribeAllBookTickersService() *SubscribeAllBookTickersService {
+	return &SubscribeAllBookTickersService{c: c}
 }
 
-func (s *subscribeAllBookTickersService) Do(ctx context.Context, handler func(message *WsBookTickerResponse, err error)) (done chan<- struct{}, stop <-chan struct{}, err error) {
-	url := common.WEBSOCKET_STREAM_SEPARATOR + "!bookTicker"
-	return request.Subscribe(ctx, s.c, url, handler)
+func (s *SubscribeAllBookTickersService) Do(ctx context.Context, cb func(*WsBookTickerEvent, error)) (chan<- struct{}, <-chan struct{}, error) {
+	return request.Subscribe[WsBookTickerEvent](ctx, s.c, streamPath("!bookTicker"), cb)
 }
 
-type subscribeCombinedDepthService struct {
-	c            *SpotWebSocketClient
-	symbolLevels map[string]string
-}
-
-// symbolLevels:
-// "BTCUSDT": "5@100ms",
-// "ETHUSDT": "5@100ms",
-// "SOLUSDT": "5@100ms",
-func (c *SpotWebSocketClient) NewSubscribeCombinedDepthService(symbolLevels map[string]string) *subscribeCombinedDepthService {
-	return &subscribeCombinedDepthService{c: c, symbolLevels: symbolLevels}
-}
-
-func (s *subscribeCombinedDepthService) Do(ctx context.Context, handler func(message *WsCombinedDepthResponse, err error)) (done chan<- struct{}, stop <-chan struct{}, err error) {
-	symbols := make([]string, 0, len(s.symbolLevels))
-	for symbol, level := range s.symbolLevels {
-		symbols = append(symbols, fmt.Sprintf("%s@depth%s", strings.ToLower(symbol), level))
-	}
-	url := "/stream?streams=" + strings.Join(symbols, "/")
-	return request.Subscribe(ctx, s.c, url, handler)
-}
-
-type WsCombinedDepthResponse struct {
-	Stream string          `json:"stream"`
-	Data   WsDepthResponse `json:"data"`
-}
-
-type WsDepthResponse struct {
-	WsBaseEvent
-	TransactionTime  time.Time   `json:"T,format:unixmilli"`
-	Symbol           string      `json:"s"`
-	FirstUpdateID    int64       `json:"U"`
-	LastUpdateID     int64       `json:"u"`
-	PrevLastUpdateID int64       `json:"pu"`
-	Bids             []PriceSize `json:"b"`
-	Asks             []PriceSize `json:"a"`
-}
-
-type SubscribeDiffDepthService struct {
+// SubscribePartialDepthService -- <symbol>@depth<levels> or <symbol>@depth<levels>@100ms
+//
+// levels must be 5, 10, or 20. Set fast=true for 100ms updates.
+type SubscribePartialDepthService struct {
 	c      *SpotWebSocketClient
 	symbol string
-	speed  string
+	levels int
+	fast   bool
 }
 
-func (c *SpotWebSocketClient) NewSubscribeDiffDepthService(symbol string) *SubscribeDiffDepthService {
-	s := SubscribeDiffDepthService{c: c, symbol: symbol}
-	return &s
+func (c *SpotWebSocketClient) NewSubscribePartialDepthService(symbol string, levels int) *SubscribePartialDepthService {
+	return &SubscribePartialDepthService{c: c, symbol: symbol, levels: levels}
 }
 
-// Default update frequency is 1000ms per docs when Speed is not set.
-func (s *SubscribeDiffDepthService) Speed(speed DiffDepthSpeed) *SubscribeDiffDepthService {
-	s.speed = "@" + string(speed)
+func (s *SubscribePartialDepthService) SetFast(fast bool) *SubscribePartialDepthService {
+	s.fast = fast
 	return s
 }
 
-func (s *SubscribeDiffDepthService) Do(ctx context.Context, handler func(message *WsIncrementalDepthResponse, err error)) (done chan<- struct{}, stop <-chan struct{}, err error) {
-	url := common.WEBSOCKET_STREAM_SEPARATOR + strings.ToLower(s.symbol) + "@depth" + s.speed
-	return request.Subscribe(ctx, s.c, url, handler)
+func (s *SubscribePartialDepthService) Do(ctx context.Context, cb func(*WsPartialDepthEvent, error)) (chan<- struct{}, <-chan struct{}, error) {
+	stream := s.symbol + "@depth" + itoa(s.levels)
+	if s.fast {
+		stream += "@100ms"
+	}
+	return request.Subscribe[WsPartialDepthEvent](ctx, s.c, streamPath(stream), cb)
 }
 
-type WsIncrementalDepthResponse struct {
-	EventType         string      `json:"e"`
-	EventTime         time.Time   `json:"E,format:unixmilli"`
-	TransactionTime   time.Time   `json:"T,format:unixmilli"`
-	Symbol            string      `json:"s"`
-	FirstUpdateID     int64       `json:"U"`
-	FinalUpdateID     int64       `json:"u"`
-	PrevFinalUpdateID int64       `json:"pu"`
-	Bids              []PriceSize `json:"b"`
-	Asks              []PriceSize `json:"a"`
+type WsPartialDepthEvent struct {
+	EventType       string      `json:"e"`
+	EventTime       time.Time   `json:"E,format:unixmilli"`
+	TransactionTime time.Time   `json:"T,format:unixmilli"`
+	Symbol          string      `json:"s"`
+	FirstUpdateID   int64       `json:"U"`
+	FinalUpdateID   int64       `json:"u"`
+	PrevFinalID     int64       `json:"pu"`
+	Bids            [][2]string `json:"bids"`
+	Asks            [][2]string `json:"asks"`
+}
+
+// SubscribeDiffDepthService -- <symbol>@depth or <symbol>@depth@100ms
+//
+// Note the payload uses "b"/"a" (lowercase short form) for diff updates,
+// distinct from PartialDepth's "bids"/"asks".
+type SubscribeDiffDepthService struct {
+	c      *SpotWebSocketClient
+	symbol string
+	fast   bool
+}
+
+func (c *SpotWebSocketClient) NewSubscribeDiffDepthService(symbol string) *SubscribeDiffDepthService {
+	return &SubscribeDiffDepthService{c: c, symbol: symbol}
+}
+
+func (s *SubscribeDiffDepthService) SetFast(fast bool) *SubscribeDiffDepthService {
+	s.fast = fast
+	return s
+}
+
+func (s *SubscribeDiffDepthService) Do(ctx context.Context, cb func(*WsDiffDepthEvent, error)) (chan<- struct{}, <-chan struct{}, error) {
+	stream := s.symbol + "@depth"
+	if s.fast {
+		stream += "@100ms"
+	}
+	return request.Subscribe[WsDiffDepthEvent](ctx, s.c, streamPath(stream), cb)
+}
+
+type WsDiffDepthEvent struct {
+	EventType       string      `json:"e"`
+	EventTime       time.Time   `json:"E,format:unixmilli"`
+	TransactionTime time.Time   `json:"T,format:unixmilli"`
+	Symbol          string      `json:"s"`
+	FirstUpdateID   int64       `json:"U"`
+	FinalUpdateID   int64       `json:"u"`
+	PrevFinalID     int64       `json:"pu"`
+	Bids            [][2]string `json:"b"`
+	Asks            [][2]string `json:"a"`
+}
+
+// SubscribeTradeProService -- <symbol>@tradepro
+//
+// Aster-specific stream that exposes the on-chain transaction hash and the
+// taker/maker addresses for each fill (or "hidden" for hidden orders).
+type SubscribeTradeProService struct {
+	c      *SpotWebSocketClient
+	symbol string
+}
+
+func (c *SpotWebSocketClient) NewSubscribeTradeProService(symbol string) *SubscribeTradeProService {
+	return &SubscribeTradeProService{c: c, symbol: symbol}
+}
+
+func (s *SubscribeTradeProService) Do(ctx context.Context, cb func(*WsTradeProEvent, error)) (chan<- struct{}, <-chan struct{}, error) {
+	return request.Subscribe[WsTradeProEvent](ctx, s.c, streamPath(s.symbol+"@tradepro"), cb)
+}
+
+type WsTradeProEvent struct {
+	EventType       string          `json:"e"`
+	EventTime       time.Time       `json:"E,format:unixmilli"`
+	TradeTime       time.Time       `json:"T,format:unixmilli"`
+	Symbol          string          `json:"s"`
+	TradeID         int64           `json:"t"`
+	Price           decimal.Decimal `json:"p"`
+	Quantity        decimal.Decimal `json:"q"`
+	TransactionHash string          `json:"h"`
+	Participants    []string        `json:"m"` // [taker, maker], "hidden" if order was hidden
+}
+
+func itoa(i int) string {
+	// small helper to avoid importing strconv just for one digit
+	switch i {
+	case 5:
+		return "5"
+	case 10:
+		return "10"
+	case 20:
+		return "20"
+	}
+	// fall back to a sane format for unexpected levels
+	return integerToString(i)
+}
+
+func integerToString(i int) string {
+	if i == 0 {
+		return "0"
+	}
+	neg := i < 0
+	if neg {
+		i = -i
+	}
+	var buf [20]byte
+	n := len(buf)
+	for i > 0 {
+		n--
+		buf[n] = byte('0' + i%10)
+		i /= 10
+	}
+	if neg {
+		n--
+		buf[n] = '-'
+	}
+	return string(buf[n:])
 }

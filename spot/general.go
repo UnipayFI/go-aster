@@ -4,9 +4,12 @@ import (
 	"context"
 	"time"
 
-	"github.com/UnipayFI/go-aster/request"
+	"github.com/UnipayFI/go-aster/v3/request"
 )
 
+// PingService -- GET /api/v3/ping
+//
+// Test connectivity to the REST API. Returns no body on success.
 type PingService struct {
 	c *SpotClient
 }
@@ -15,79 +18,13 @@ func (c *SpotClient) NewPingService() *PingService {
 	return &PingService{c: c}
 }
 
-func (s *PingService) Ping(ctx context.Context) error {
-	req := request.Get(ctx, s.c, "/api/v1/ping")
+func (s *PingService) Do(ctx context.Context) error {
+	req := request.Get(ctx, s.c, "/api/v3/ping")
 	_, err := request.Do[struct{}](req)
 	return err
 }
 
-type TimeService struct {
-	c *SpotClient
-}
-
-func (c *SpotClient) NewTimeService() *TimeService {
-	return &TimeService{c: c}
-}
-
-func (s *TimeService) GetTime(ctx context.Context) (*TimeResponse, error) {
-	req := request.Get(ctx, s.c, "/api/v1/time")
-	return request.Do[TimeResponse](req)
-}
-
-type TimeResponse struct {
-	ServerTime time.Time `json:"serverTime,format:unixmilli"`
-}
-
-type ExchangeInfoService struct {
-	c *SpotClient
-}
-
-func (c *SpotClient) NewExchangeInfoService() *ExchangeInfoService {
-	return &ExchangeInfoService{c: c}
-}
-
-func (s *ExchangeInfoService) GetExchangeInfo(ctx context.Context) (*ExchangeInfoResponse, error) {
-	req := request.Get(ctx, s.c, "/api/v1/exchangeInfo")
-	return request.Do[ExchangeInfoResponse](req)
-}
-
-type ExchangeInfoResponse struct {
-	Timezone        string      `json:"timezone"`
-	ServerTime      time.Time   `json:"serverTime,format:unixmilli"`
-	RateLimits      []RateLimit `json:"rateLimits"`
-	ExchangeFilters []any       `json:"exchangeFilters"`
-	Assets          []AssetInfo `json:"assets"`
-	Symbols         []Symbol    `json:"symbols"`
-}
-
-type RateLimit struct {
-	RateLimitType string `json:"rateLimitType"`
-	Interval      string `json:"interval"`
-	IntervalNum   int64  `json:"intervalNum"`
-	Limit         int64  `json:"limit"`
-}
-
-type AssetInfo struct {
-	Asset string `json:"asset"`
-}
-
-type Symbol struct {
-	Symbol             string           `json:"symbol"`
-	Status             string           `json:"status"`
-	BaseAsset          string           `json:"baseAsset"`
-	QuoteAsset         string           `json:"quoteAsset"`
-	PricePrecision     int              `json:"pricePrecision"`
-	QuantityPrecision  int              `json:"quantityPrecision"`
-	BaseAssetPrecision int              `json:"baseAssetPrecision"`
-	QuotePrecision     int              `json:"quotePrecision"`
-	ListingTime        time.Time        `json:"listingTime,format:unixmilli"`
-	BaseAssetAddress   string           `json:"baseAssetAddress"`
-	Filters            []map[string]any `json:"filters"`
-	OrderTypes         []OrderType      `json:"orderTypes"`
-	TimeInForce        []TimeInForce    `json:"timeInForce"`
-	OcoAllowed         bool             `json:"ocoAllowed"`
-}
-
+// GetServerTimeService -- GET /api/v3/time
 type GetServerTimeService struct {
 	c *SpotClient
 }
@@ -97,10 +34,34 @@ func (c *SpotClient) NewGetServerTimeService() *GetServerTimeService {
 }
 
 func (s *GetServerTimeService) Do(ctx context.Context) (*ServerTimeResponse, error) {
-	req := request.Get(ctx, s.c, "/api/v1/time", map[string]string{})
+	req := request.Get(ctx, s.c, "/api/v3/time")
 	return request.Do[ServerTimeResponse](req)
 }
 
 type ServerTimeResponse struct {
 	ServerTime time.Time `json:"serverTime,format:unixmilli"`
+}
+
+// NoopService -- POST /api/v3/noop
+//
+// "Noop" is a V3-specific fast cancel-helper endpoint: it accepts a signed
+// request, increments the user's nonce floor, and returns success. Used by
+// market makers to invalidate stale nonces ahead of a real order. Requires
+// SPOT_TRADE auth.
+type NoopService struct {
+	c *SpotClient
+}
+
+func (c *SpotClient) NewNoopService() *NoopService {
+	return &NoopService{c: c}
+}
+
+func (s *NoopService) Do(ctx context.Context) (*NoopResponse, error) {
+	req := request.Post(s.c, ctx, "/api/v3/noop").WithSignature()
+	return request.Do[NoopResponse](req)
+}
+
+type NoopResponse struct {
+	Code int    `json:"code"`
+	Msg  string `json:"msg"`
 }

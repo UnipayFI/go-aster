@@ -1,0 +1,295 @@
+package futures
+
+import (
+	"context"
+
+	"github.com/UnipayFI/go-aster/v3/request"
+)
+
+// Sub-account endpoints are unusual: they require signatures from the *master*
+// (and sometimes the *child*) wallet's own private key, NOT the signer/agent
+// private key configured on the client. Because master keys are usually held
+// in cold storage and should never live inside an SDK process, these services
+// accept already-computed signatures as inputs. The caller is expected to:
+//
+//  1. Build the exact message-body string per the V3 docs (see comments on
+//     each service for the format).
+//  2. Sign that string via request.SignEIP712V3 (chainId=1666 by default for
+//     mainnet) using the appropriate wallet private key.
+//  3. Pass the resulting hex signature(s) to the service.
+//
+// Because every parameter is sent as-is (no automatic nonce/signer injection),
+// these services do NOT call WithSignature -- the request payload is already
+// fully signed.
+
+// BindSubAccountService -- POST /fapi/v3/sub-accounts/bind (USER_DATA)
+//
+// Master + child two-signature flow.
+//
+// Child message body: childAddress={childAddress}&name={name}&nonce={nonce}&user={user}
+// Master message body (with childSignature appended):
+//
+//	childAddress={childAddress}&name={name}&nonce={nonce}&user={user}&childSignature={childSignature}
+type BindSubAccountService struct {
+	c              *FuturesClient
+	childAddress   string
+	name           string
+	nonce          int64
+	user           string
+	childSignature string
+	signature      string
+}
+
+func (c *FuturesClient) NewBindSubAccountService(childAddress, name, user string, nonce int64, childSignature, masterSignature string) *BindSubAccountService {
+	return &BindSubAccountService{
+		c:              c,
+		childAddress:   childAddress,
+		name:           name,
+		nonce:          nonce,
+		user:           user,
+		childSignature: childSignature,
+		signature:      masterSignature,
+	}
+}
+
+func (s *BindSubAccountService) Do(ctx context.Context) (*GenericCodeMsg, error) {
+	req := request.Post(s.c, ctx, "/fapi/v3/sub-accounts/bind", map[string]string{
+		"childAddress":   s.childAddress,
+		"name":           s.name,
+		"nonce":          formatInt64(s.nonce),
+		"user":           s.user,
+		"childSignature": s.childSignature,
+		"signature":      s.signature,
+	})
+	return request.Do[GenericCodeMsg](req)
+}
+
+// CreateSubAccountService -- POST /fapi/v3/createSubAccount (TRADE)
+//
+// Child message body:
+//
+//	subAccountName={subAccountName}&subSourceAddr={subSourceAddr}&nonce={nonce}&user={user}&signer={signer}
+//
+// Master message body (with childSignature appended):
+//
+//	subAccountName={subAccountName}&subSourceAddr={subSourceAddr}&nonce={nonce}&user={user}&signer={signer}&childSignature={childSignature}
+type CreateSubAccountService struct {
+	c              *FuturesClient
+	subSourceAddr  string
+	subAccountName string
+	nonce          int64
+	user           string
+	signer         string
+	childSignature string
+	signature      string
+}
+
+func (c *FuturesClient) NewCreateSubAccountService(subSourceAddr, subAccountName, user, signer string, nonce int64, childSignature, masterSignature string) *CreateSubAccountService {
+	return &CreateSubAccountService{
+		c:              c,
+		subSourceAddr:  subSourceAddr,
+		subAccountName: subAccountName,
+		nonce:          nonce,
+		user:           user,
+		signer:         signer,
+		childSignature: childSignature,
+		signature:      masterSignature,
+	}
+}
+
+func (s *CreateSubAccountService) Do(ctx context.Context) (*GenericCodeMsg, error) {
+	req := request.Post(s.c, ctx, "/fapi/v3/createSubAccount", map[string]string{
+		"subSourceAddr":  s.subSourceAddr,
+		"subAccountName": s.subAccountName,
+		"nonce":          formatInt64(s.nonce),
+		"user":           s.user,
+		"signer":         s.signer,
+		"childSignature": s.childSignature,
+		"signature":      s.signature,
+	})
+	return request.Do[GenericCodeMsg](req)
+}
+
+// GetSubAccountListService -- GET /fapi/v3/getSubAccountList (USER_DATA)
+//
+// Signs with the *signer* private key (EIP-712), unique among sub-account
+// endpoints. The SDK can build this signature for you because it uses the
+// regular configured signer, so this service does call WithSignature.
+//
+// Note: the doc explicitly states this endpoint always uses the EIP-712
+// signer scheme even when the master account is Solana. WithSignature here
+// produces exactly the right payload (nonce/signer/signature appended).
+type GetSubAccountListService struct {
+	c *FuturesClient
+}
+
+func (c *FuturesClient) NewGetSubAccountListService() *GetSubAccountListService {
+	return &GetSubAccountListService{c: c}
+}
+
+func (s *GetSubAccountListService) Do(ctx context.Context) ([]SubAccountListEntry, error) {
+	req := request.Get(ctx, s.c, "/fapi/v3/getSubAccountList").WithSignature()
+	resp, err := request.Do[[]SubAccountListEntry](req)
+	if err != nil {
+		return nil, err
+	}
+	return *resp, nil
+}
+
+type SubAccountListEntry struct {
+	AccountID      int64  `json:"accountId"`
+	SubAccountName string `json:"subAccountName"`
+	ParentAccount  bool   `json:"parentAccount"`
+}
+
+// UpdateSubAccountService -- POST /fapi/v3/updateSubAccount (TRADE)
+//
+// Master signature only. Message body (omitting nil optional params):
+//
+//	subSourceAddr={subSourceAddr}&nonce={nonce}&user={user}&signer={signer}[&subAccountName={...}][&status={...}]
+//
+// At least one of subAccountName / status must be provided.
+type UpdateSubAccountService struct {
+	c              *FuturesClient
+	subSourceAddr  string
+	nonce          int64
+	user           string
+	signer         string
+	subAccountName string
+	status         string // NORMAL | FROZEN
+	signature      string
+}
+
+func (c *FuturesClient) NewUpdateSubAccountService(subSourceAddr, user, signer string, nonce int64, masterSignature string) *UpdateSubAccountService {
+	return &UpdateSubAccountService{
+		c:             c,
+		subSourceAddr: subSourceAddr,
+		nonce:         nonce,
+		user:          user,
+		signer:        signer,
+		signature:     masterSignature,
+	}
+}
+
+func (s *UpdateSubAccountService) SetSubAccountName(name string) *UpdateSubAccountService {
+	s.subAccountName = name
+	return s
+}
+
+func (s *UpdateSubAccountService) SetStatus(status string) *UpdateSubAccountService {
+	s.status = status
+	return s
+}
+
+func (s *UpdateSubAccountService) Do(ctx context.Context) (*GenericCodeMsg, error) {
+	params := map[string]string{
+		"subSourceAddr": s.subSourceAddr,
+		"nonce":         formatInt64(s.nonce),
+		"user":          s.user,
+		"signer":        s.signer,
+		"signature":     s.signature,
+	}
+	if s.subAccountName != "" {
+		params["subAccountName"] = s.subAccountName
+	}
+	if s.status != "" {
+		params["status"] = s.status
+	}
+	req := request.Post(s.c, ctx, "/fapi/v3/updateSubAccount", params)
+	return request.Do[GenericCodeMsg](req)
+}
+
+// SubAccountTransferKindType discriminates the four transfer flows.
+type SubAccountTransferKindType string
+
+const (
+	SubAccountTransferFutureToFuture SubAccountTransferKindType = "FUTURE_FUTURE"
+	SubAccountTransferFutureToSpot   SubAccountTransferKindType = "FUTURE_SPOT"
+	SubAccountTransferSpotToFuture   SubAccountTransferKindType = "SPOT_FUTURE"
+	SubAccountTransferSpotToSpot     SubAccountTransferKindType = "SPOT_SPOT"
+)
+
+// SubAccountTransferService -- POST /fapi/v3/subAccountTransfer (TRADE)
+//
+// Signed with the user's wallet private key (master OR sub depending on flow,
+// see scenario table in the V3 doc). Message body:
+//
+// Without fromAccountAddress:
+//
+//	toAccountAddress={...}&asset={...}&amount={...}&kindType={...}&nonce={...}&user={...}&signer={...}
+//
+// With fromAccountAddress:
+//
+//	toAccountAddress={...}&asset={...}&amount={...}&kindType={...}&nonce={...}&user={...}&signer={...}&fromAccountAddress={...}
+type SubAccountTransferService struct {
+	c                  *FuturesClient
+	toAccountAddress   string
+	asset              string
+	amount             string
+	kindType           SubAccountTransferKindType
+	nonce              int64
+	user               string
+	signer             string
+	fromAccountAddress string
+	signature          string
+}
+
+func (c *FuturesClient) NewSubAccountTransferService(toAddr, asset, amount string, kind SubAccountTransferKindType, user, signer string, nonce int64, signature string) *SubAccountTransferService {
+	return &SubAccountTransferService{
+		c:                c,
+		toAccountAddress: toAddr,
+		asset:            asset,
+		amount:           amount,
+		kindType:         kind,
+		nonce:            nonce,
+		user:             user,
+		signer:           signer,
+		signature:        signature,
+	}
+}
+
+func (s *SubAccountTransferService) SetFromAccountAddress(addr string) *SubAccountTransferService {
+	s.fromAccountAddress = addr
+	return s
+}
+
+func (s *SubAccountTransferService) Do(ctx context.Context) (*GenericCodeMsg, error) {
+	params := map[string]string{
+		"toAccountAddress": s.toAccountAddress,
+		"asset":            s.asset,
+		"amount":           s.amount,
+		"kindType":         string(s.kindType),
+		"nonce":            formatInt64(s.nonce),
+		"user":             s.user,
+		"signer":           s.signer,
+		"signature":        s.signature,
+	}
+	if s.fromAccountAddress != "" {
+		params["fromAccountAddress"] = s.fromAccountAddress
+	}
+	req := request.Post(s.c, ctx, "/fapi/v3/subAccountTransfer", params)
+	return request.Do[GenericCodeMsg](req)
+}
+
+func formatInt64(i int64) string {
+	const digits = "0123456789"
+	if i == 0 {
+		return "0"
+	}
+	neg := i < 0
+	if neg {
+		i = -i
+	}
+	var buf [20]byte
+	n := len(buf)
+	for i > 0 {
+		n--
+		buf[n] = digits[i%10]
+		i /= 10
+	}
+	if neg {
+		n--
+		buf[n] = '-'
+	}
+	return string(buf[n:])
+}

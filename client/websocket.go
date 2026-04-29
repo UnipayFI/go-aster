@@ -1,7 +1,7 @@
 package client
 
 import (
-	"github.com/UnipayFI/go-aster/pkg/log"
+	"github.com/UnipayFI/go-aster/v3/pkg/log"
 	"github.com/go-resty/resty/v2"
 )
 

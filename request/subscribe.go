@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/UnipayFI/go-aster/common"
-	"github.com/UnipayFI/go-aster/pkg/log"
+	"github.com/UnipayFI/go-aster/v3/common"
+	"github.com/UnipayFI/go-aster/v3/pkg/log"
 	"github.com/go-resty/resty/v2"
 	"github.com/gorilla/websocket"
 )
@@ -18,6 +18,30 @@ type WebSocketClient interface {
 }
 
 func Subscribe[T any](ctx context.Context, client WebSocketClient, endpoint string, callback func(message *T, err error)) (done chan<- struct{}, stop <-chan struct{}, err error) {
+	return subscribeBytes(ctx, client, endpoint, func(message []byte, e error) {
+		if e != nil {
+			callback(nil, e)
+			return
+		}
+		var msg T
+		if err := client.GetHttpClient().JSONUnmarshal(message, &msg); err != nil {
+			callback(nil, err)
+			return
+		}
+		callback(&msg, nil)
+	})
+}
+
+// SubscribeRaw delivers each WebSocket frame's raw bytes to the callback
+// without JSON-decoding. Use this for streams that union multiple payload
+// shapes under a single connection -- for example the spot/futures user-data
+// stream, where the caller must look at the "e" field to decide which struct
+// to decode into.
+func SubscribeRaw(ctx context.Context, client WebSocketClient, endpoint string, callback func(message []byte, err error)) (done chan<- struct{}, stop <-chan struct{}, err error) {
+	return subscribeBytes(ctx, client, endpoint, callback)
+}
+
+func subscribeBytes(ctx context.Context, client WebSocketClient, endpoint string, callback func(message []byte, err error)) (done chan<- struct{}, stop <-chan struct{}, err error) {
 	fullURL := client.GetHttpClient().BaseURL + endpoint
 	dialer := websocket.Dialer{
 		Proxy:             http.ProxyFromEnvironment,
@@ -57,9 +81,7 @@ func Subscribe[T any](ctx context.Context, client WebSocketClient, endpoint stri
 				return
 			}
 			client.GetLogger().Debugf("received message: %s", common.BytesToString(message))
-			var msg T
-			err = client.GetHttpClient().JSONUnmarshal(message, &msg)
-			callback(&msg, err)
+			callback(message, nil)
 		}
 	}()
 	return doneC, stopC, nil
@@ -68,17 +90,15 @@ func Subscribe[T any](ctx context.Context, client WebSocketClient, endpoint stri
 func keepAlive(conn *websocket.Conn, timeout, interval time.Duration) {
 	latest := time.Now()
 
-	// Set pong handler to keep the connection alive
-	conn.SetPongHandler(func(raw string) error {
-		err := conn.WriteControl(websocket.PongMessage, []byte(raw), time.Now().Add(timeout))
-		if err == nil {
-			latest = time.Now()
-		}
-		return err
+	// Update activity timestamp on incoming pongs (no reply needed for pongs).
+	conn.SetPongHandler(func(string) error {
+		latest = time.Now()
+		return nil
 	})
-	// Set ping handler to keep the connection alive
+	// Reply to incoming pings with a pong (the gorilla default does this too,
+	// but we override to also update the activity timestamp).
 	conn.SetPingHandler(func(raw string) error {
-		err := conn.WriteControl(websocket.PingMessage, []byte(raw), time.Now().Add(timeout))
+		err := conn.WriteControl(websocket.PongMessage, []byte(raw), time.Now().Add(timeout))
 		if err == nil {
 			latest = time.Now()
 		}

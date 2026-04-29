@@ -2,77 +2,130 @@ package futures
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"strconv"
 	"time"
 
-	"github.com/UnipayFI/go-aster/request"
+	"github.com/UnipayFI/go-aster/v3/request"
 	"github.com/shopspring/decimal"
 )
 
-type DepthService struct {
+// GetExchangeInfoService -- GET /fapi/v3/exchangeInfo
+type GetExchangeInfoService struct {
+	c *FuturesClient
+}
+
+func (c *FuturesClient) NewGetExchangeInfoService() *GetExchangeInfoService {
+	return &GetExchangeInfoService{c: c}
+}
+
+func (s *GetExchangeInfoService) Do(ctx context.Context) (*ExchangeInfoResponse, error) {
+	req := request.Get(ctx, s.c, "/fapi/v3/exchangeInfo")
+	return request.Do[ExchangeInfoResponse](req)
+}
+
+type ExchangeInfoResponse struct {
+	Timezone        string          `json:"timezone"`
+	ServerTime      time.Time       `json:"serverTime,format:unixmilli"`
+	RateLimits      []RateLimit     `json:"rateLimits"`
+	ExchangeFilters []any           `json:"exchangeFilters"`
+	Assets          []AssetInfo     `json:"assets"`
+	Symbols         []FuturesSymbol `json:"symbols"`
+}
+
+type RateLimit struct {
+	RateLimitType string `json:"rateLimitType"`
+	Interval      string `json:"interval"`
+	IntervalNum   int64  `json:"intervalNum"`
+	Limit         int64  `json:"limit"`
+}
+
+type AssetInfo struct {
+	Asset             string          `json:"asset"`
+	MarginAvailable   bool            `json:"marginAvailable"`
+	AutoAssetExchange decimal.Decimal `json:"autoAssetExchange"`
+}
+
+type FuturesSymbol struct {
+	Symbol                string           `json:"symbol"`
+	Pair                  string           `json:"pair"`
+	ContractType          string           `json:"contractType"`
+	DeliveryDate          int64            `json:"deliveryDate"`
+	OnboardDate           int64            `json:"onboardDate"`
+	Status                string           `json:"status"`
+	MaintMarginPercent    decimal.Decimal  `json:"maintMarginPercent"`
+	RequiredMarginPercent decimal.Decimal  `json:"requiredMarginPercent"`
+	BaseAsset             string           `json:"baseAsset"`
+	QuoteAsset            string           `json:"quoteAsset"`
+	MarginAsset           string           `json:"marginAsset"`
+	PricePrecision        int              `json:"pricePrecision"`
+	QuantityPrecision     int              `json:"quantityPrecision"`
+	BaseAssetPrecision    int              `json:"baseAssetPrecision"`
+	QuotePrecision        int              `json:"quotePrecision"`
+	UnderlyingType        string           `json:"underlyingType"`
+	UnderlyingSubType     []string         `json:"underlyingSubType"`
+	SettlePlan            int              `json:"settlePlan"`
+	TriggerProtect        decimal.Decimal  `json:"triggerProtect"`
+	Filters               []map[string]any `json:"filters"`
+	OrderTypes            []OrderType      `json:"OrderType"`
+	TimeInForce           []TimeInForce    `json:"timeInForce"`
+	LiquidationFee        decimal.Decimal  `json:"liquidationFee"`
+	MarketTakeBound       decimal.Decimal  `json:"marketTakeBound"`
+}
+
+// GetDepthService -- GET /fapi/v3/depth
+type GetDepthService struct {
 	c      *FuturesClient
 	params map[string]string
 }
 
-func (c *FuturesClient) NewDepthService(symbol string) *DepthService {
-	return &DepthService{c: c, params: map[string]string{"symbol": symbol}}
+func (c *FuturesClient) NewGetDepthService(symbol string) *GetDepthService {
+	return &GetDepthService{c: c, params: map[string]string{"symbol": symbol}}
 }
 
-func (s *DepthService) SetLimit(limit int) *DepthService {
+func (s *GetDepthService) SetLimit(limit int) *GetDepthService {
 	s.params["limit"] = strconv.Itoa(limit)
 	return s
 }
 
-func (s *DepthService) Do(ctx context.Context) (*DepthResponse, error) {
-	req := request.Get(ctx, s.c, "/fapi/v1/depth", s.params)
+func (s *GetDepthService) Do(ctx context.Context) (*DepthResponse, error) {
+	req := request.Get(ctx, s.c, "/fapi/v3/depth", s.params)
 	return request.Do[DepthResponse](req)
 }
 
 type DepthResponse struct {
 	LastUpdateId    int64       `json:"lastUpdateId"`
-	EventTime       time.Time   `json:"E,format:unixmilli"`
+	MessageTime     time.Time   `json:"E,format:unixmilli"`
 	TransactionTime time.Time   `json:"T,format:unixmilli"`
-	Bids            []PriceSize `json:"bids"`
-	Asks            []PriceSize `json:"asks"`
+	Bids            [][2]string `json:"bids"`
+	Asks            [][2]string `json:"asks"`
 }
 
-type PriceSize [2]decimal.Decimal
-
-func (p *PriceSize) Price() decimal.Decimal {
-	return p[0]
-}
-
-func (p *PriceSize) Size() decimal.Decimal {
-	return p[1]
-}
-
-type GetTradesService struct {
+// GetRecentTradesService -- GET /fapi/v3/trades
+type GetRecentTradesService struct {
 	c      *FuturesClient
 	params map[string]string
 }
 
-func (c *FuturesClient) NewGetTradesService(symbol string) *GetTradesService {
-	return &GetTradesService{c: c, params: map[string]string{"symbol": symbol}}
+func (c *FuturesClient) NewGetRecentTradesService(symbol string) *GetRecentTradesService {
+	return &GetRecentTradesService{c: c, params: map[string]string{"symbol": symbol}}
 }
 
-func (s *GetTradesService) SetLimit(limit int) *GetTradesService {
+func (s *GetRecentTradesService) SetLimit(limit int) *GetRecentTradesService {
 	s.params["limit"] = strconv.Itoa(limit)
 	return s
 }
 
-func (s *GetTradesService) Do(ctx context.Context) ([]TradeResponse, error) {
-	req := request.Get(ctx, s.c, "/fapi/v1/trades", s.params)
-	trades, err := request.Do[[]TradeResponse](req)
+func (s *GetRecentTradesService) Do(ctx context.Context) ([]Trade, error) {
+	req := request.Get(ctx, s.c, "/fapi/v3/trades", s.params)
+	resp, err := request.Do[[]Trade](req)
 	if err != nil {
 		return nil, err
 	}
-	return *trades, nil
+	return *resp, nil
 }
 
-type TradeResponse struct {
-	Id           int64           `json:"id"`
+type Trade struct {
+	ID           int64           `json:"id"`
 	Price        decimal.Decimal `json:"price"`
 	Qty          decimal.Decimal `json:"qty"`
 	QuoteQty     decimal.Decimal `json:"quoteQty"`
@@ -80,268 +133,284 @@ type TradeResponse struct {
 	IsBuyerMaker bool            `json:"isBuyerMaker"`
 }
 
-type HistoricalTradesService struct {
+// GetHistoricalTradesService -- GET /fapi/v3/historicalTrades
+type GetHistoricalTradesService struct {
 	c      *FuturesClient
 	params map[string]string
 }
 
-func (c *FuturesClient) NewHistoricalTradesService(symbol string) *HistoricalTradesService {
-	return &HistoricalTradesService{c: c, params: map[string]string{"symbol": symbol}}
+func (c *FuturesClient) NewGetHistoricalTradesService(symbol string) *GetHistoricalTradesService {
+	return &GetHistoricalTradesService{c: c, params: map[string]string{"symbol": symbol}}
 }
 
-func (s *HistoricalTradesService) SetLimit(limit int) *HistoricalTradesService {
+func (s *GetHistoricalTradesService) SetLimit(limit int) *GetHistoricalTradesService {
 	s.params["limit"] = strconv.Itoa(limit)
 	return s
 }
 
-func (s *HistoricalTradesService) SetFromId(fromId int64) *HistoricalTradesService {
-	s.params["fromId"] = strconv.FormatInt(fromId, 10)
+func (s *GetHistoricalTradesService) SetFromId(id int64) *GetHistoricalTradesService {
+	s.params["fromId"] = strconv.FormatInt(id, 10)
 	return s
 }
 
-func (s *HistoricalTradesService) Do(ctx context.Context) ([]TradeResponse, error) {
-	req := request.Get(ctx, s.c, "/fapi/v1/historicalTrades", s.params).WithApiKey()
-	trades, err := request.Do[[]TradeResponse](req)
-	if err != nil {
-		return nil, err
-	}
-	return *trades, nil
-}
-
-type AggTradesService struct {
-	c      *FuturesClient
-	params map[string]string
-}
-
-func (c *FuturesClient) NewAggTradesService(symbol string) *AggTradesService {
-	return &AggTradesService{c: c, params: map[string]string{"symbol": symbol}}
-}
-
-func (s *AggTradesService) SetFromId(fromId int64) *AggTradesService {
-	s.params["fromId"] = strconv.FormatInt(fromId, 10)
-	return s
-}
-
-func (s *AggTradesService) SetStartTime(startTime time.Time) *AggTradesService {
-	s.params["startTime"] = strconv.FormatInt(startTime.UnixMilli(), 10)
-	return s
-}
-
-func (s *AggTradesService) SetEndTime(endTime time.Time) *AggTradesService {
-	s.params["endTime"] = strconv.FormatInt(endTime.UnixMilli(), 10)
-	return s
-}
-
-func (s *AggTradesService) SetLimit(limit int) *AggTradesService {
-	s.params["limit"] = strconv.Itoa(limit)
-	return s
-}
-
-func (s *AggTradesService) Do(ctx context.Context) ([]AggTradeResponse, error) {
-	req := request.Get(ctx, s.c, "/fapi/v1/aggTrades", s.params)
-	trades, err := request.Do[[]AggTradeResponse](req)
-	if err != nil {
-		return nil, err
-	}
-	return *trades, nil
-}
-
-type AggTradeResponse struct {
-	AggTradeId   int64           `json:"a"`
-	Price        decimal.Decimal `json:"p"`
-	Quantity     decimal.Decimal `json:"q"`
-	FirstTradeId int64           `json:"f"`
-	LastTradeId  int64           `json:"l"`
-	Timestamp    time.Time       `json:"T,format:unixmilli"`
-	IsBuyerMaker bool            `json:"m"`
-}
-
-type KlinesService struct {
-	c      *FuturesClient
-	params map[string]string
-}
-
-func (c *FuturesClient) NewKlinesService(symbol string, interval KlineInterval) *KlinesService {
-	return &KlinesService{c: c, params: map[string]string{"symbol": symbol, "interval": string(interval)}}
-}
-
-func (s *KlinesService) SetStartTime(startTime time.Time) *KlinesService {
-	s.params["startTime"] = strconv.FormatInt(startTime.UnixMilli(), 10)
-	return s
-}
-
-func (s *KlinesService) SetEndTime(endTime time.Time) *KlinesService {
-	s.params["endTime"] = strconv.FormatInt(endTime.UnixMilli(), 10)
-	return s
-}
-
-func (s *KlinesService) SetLimit(limit int) *KlinesService {
-	s.params["limit"] = strconv.Itoa(limit)
-	return s
-}
-
-func (s *KlinesService) Do(ctx context.Context) ([]Kline, error) {
-	req := request.Get(ctx, s.c, "/fapi/v1/klines", s.params)
-	klines, err := request.Do[[]Kline](req)
-	if err != nil {
-		return nil, err
-	}
-	return *klines, nil
-}
-
-type Kline struct {
-	OpenTime                 time.Time       `json:"openTime,format:unixmilli"`
-	Open                     decimal.Decimal `json:"open"`
-	High                     decimal.Decimal `json:"high"`
-	Low                      decimal.Decimal `json:"low"`
-	Close                    decimal.Decimal `json:"close"`
-	Volume                   decimal.Decimal `json:"volume"`
-	CloseTime                time.Time       `json:"closeTime,format:unixmilli"`
-	QuoteAssetVolume         decimal.Decimal `json:"quoteAssetVolume"`
-	TradeNum                 int64           `json:"tradeNum"`
-	TakerBuyBaseAssetVolume  decimal.Decimal `json:"takerBuyBaseAssetVolume"`
-	TakerBuyQuoteAssetVolume decimal.Decimal `json:"takerBuyQuoteAssetVolume"`
-}
-
-func (k *Kline) UnmarshalJSON(data []byte) error {
-	var arr []json.RawMessage
-	if err := json.Unmarshal(data, &arr); err != nil {
-		return fmt.Errorf("failed to unmarshal as array: %w", err)
-	}
-	if len(arr) < 11 {
-		return fmt.Errorf("expected array length >= 11, got %d", len(arr))
-	}
-	var opentime int64
-	if err := json.Unmarshal(arr[0], &opentime); err == nil {
-		k.OpenTime = time.Unix(opentime/1000, (opentime%1000)*int64(time.Millisecond))
-	} else {
-		return fmt.Errorf("failed to unmarshal open time: %w", err)
-	}
-	if err := json.Unmarshal(arr[1], &k.Open); err != nil {
-		return fmt.Errorf("failed to unmarshal open: %w", err)
-	}
-	if err := json.Unmarshal(arr[2], &k.High); err != nil {
-		return fmt.Errorf("failed to unmarshal high: %w", err)
-	}
-	if err := json.Unmarshal(arr[3], &k.Low); err != nil {
-		return fmt.Errorf("failed to unmarshal low: %w", err)
-	}
-	if err := json.Unmarshal(arr[4], &k.Close); err != nil {
-		return fmt.Errorf("failed to unmarshal close: %w", err)
-	}
-	if err := json.Unmarshal(arr[5], &k.Volume); err != nil {
-		return fmt.Errorf("failed to unmarshal volume: %w", err)
-	}
-	var closeTime int64
-	if err := json.Unmarshal(arr[6], &closeTime); err == nil {
-		k.CloseTime = time.Unix(closeTime/1000, (closeTime%1000)*int64(time.Millisecond))
-	} else {
-		return fmt.Errorf("failed to unmarshal close time: %w", err)
-	}
-	if err := json.Unmarshal(arr[7], &k.QuoteAssetVolume); err != nil {
-		return fmt.Errorf("failed to unmarshal quote asset volume: %w", err)
-	}
-	if err := json.Unmarshal(arr[8], &k.TradeNum); err != nil {
-		return fmt.Errorf("failed to unmarshal trade num: %w", err)
-	}
-	if err := json.Unmarshal(arr[9], &k.TakerBuyBaseAssetVolume); err != nil {
-		return fmt.Errorf("failed to unmarshal taker buy base asset volume: %w", err)
-	}
-	if err := json.Unmarshal(arr[10], &k.TakerBuyQuoteAssetVolume); err != nil {
-		return fmt.Errorf("failed to unmarshal taker buy quote asset volume: %w", err)
-	}
-	return nil
-}
-
-type IndexPriceKlinesService struct {
-	c      *FuturesClient
-	params map[string]string
-}
-
-func (c *FuturesClient) NewIndexPriceKlinesService(pair string, interval KlineInterval) *IndexPriceKlinesService {
-	return &IndexPriceKlinesService{c: c, params: map[string]string{"pair": pair, "interval": string(interval)}}
-}
-
-func (s *IndexPriceKlinesService) SetStartTime(startTime time.Time) *IndexPriceKlinesService {
-	s.params["startTime"] = strconv.FormatInt(startTime.UnixMilli(), 10)
-	return s
-}
-
-func (s *IndexPriceKlinesService) SetEndTime(endTime time.Time) *IndexPriceKlinesService {
-	s.params["endTime"] = strconv.FormatInt(endTime.UnixMilli(), 10)
-	return s
-}
-
-func (s *IndexPriceKlinesService) SetLimit(limit int) *IndexPriceKlinesService {
-	s.params["limit"] = strconv.Itoa(limit)
-	return s
-}
-
-func (s *IndexPriceKlinesService) Do(ctx context.Context) ([]Kline, error) {
-	req := request.Get(ctx, s.c, "/fapi/v1/indexPriceKlines", s.params)
-	klines, err := request.Do[[]Kline](req)
-	if err != nil {
-		return nil, err
-	}
-	return *klines, nil
-}
-
-type MarkPriceKlinesService struct {
-	c      *FuturesClient
-	params map[string]string
-}
-
-func (c *FuturesClient) NewMarkPriceKlinesService(symbol string, interval KlineInterval) *MarkPriceKlinesService {
-	return &MarkPriceKlinesService{c: c, params: map[string]string{"symbol": symbol, "interval": string(interval)}}
-}
-
-func (s *MarkPriceKlinesService) SetStartTime(startTime time.Time) *MarkPriceKlinesService {
-	s.params["startTime"] = strconv.FormatInt(startTime.UnixMilli(), 10)
-	return s
-}
-
-func (s *MarkPriceKlinesService) SetEndTime(endTime time.Time) *MarkPriceKlinesService {
-	s.params["endTime"] = strconv.FormatInt(endTime.UnixMilli(), 10)
-	return s
-}
-
-func (s *MarkPriceKlinesService) SetLimit(limit int) *MarkPriceKlinesService {
-	s.params["limit"] = strconv.Itoa(limit)
-	return s
-}
-
-func (s *MarkPriceKlinesService) Do(ctx context.Context) ([]Kline, error) {
-	req := request.Get(ctx, s.c, "/fapi/v1/markPriceKlines", s.params)
-	klines, err := request.Do[[]Kline](req)
-	if err != nil {
-		return nil, err
-	}
-	return *klines, nil
-}
-
-type PremiumIndexService struct {
-	c *FuturesClient
-}
-
-func (c *FuturesClient) NewPremiumIndexService() *PremiumIndexService {
-	return &PremiumIndexService{c: c}
-}
-
-func (s *PremiumIndexService) Do(ctx context.Context, symbol string) (*PremiumIndexResponse, error) {
-	req := request.Get(ctx, s.c, "/fapi/v1/premiumIndex", map[string]string{"symbol": symbol})
-	return request.Do[PremiumIndexResponse](req)
-}
-
-func (s *PremiumIndexService) DoAll(ctx context.Context) ([]PremiumIndexResponse, error) {
-	req := request.Get(ctx, s.c, "/fapi/v1/premiumIndex")
-	resp, err := request.Do[[]PremiumIndexResponse](req)
+func (s *GetHistoricalTradesService) Do(ctx context.Context) ([]Trade, error) {
+	req := request.Get(ctx, s.c, "/fapi/v3/historicalTrades", s.params)
+	resp, err := request.Do[[]Trade](req)
 	if err != nil {
 		return nil, err
 	}
 	return *resp, nil
 }
 
-type PremiumIndexResponse struct {
+// GetAggTradesService -- GET /fapi/v3/aggTrades
+type GetAggTradesService struct {
+	c      *FuturesClient
+	params map[string]string
+}
+
+func (c *FuturesClient) NewGetAggTradesService(symbol string) *GetAggTradesService {
+	return &GetAggTradesService{c: c, params: map[string]string{"symbol": symbol}}
+}
+
+func (s *GetAggTradesService) SetFromId(id int64) *GetAggTradesService {
+	s.params["fromId"] = strconv.FormatInt(id, 10)
+	return s
+}
+
+func (s *GetAggTradesService) SetStartTime(t time.Time) *GetAggTradesService {
+	s.params["startTime"] = strconv.FormatInt(t.UnixMilli(), 10)
+	return s
+}
+
+func (s *GetAggTradesService) SetEndTime(t time.Time) *GetAggTradesService {
+	s.params["endTime"] = strconv.FormatInt(t.UnixMilli(), 10)
+	return s
+}
+
+func (s *GetAggTradesService) SetLimit(limit int) *GetAggTradesService {
+	s.params["limit"] = strconv.Itoa(limit)
+	return s
+}
+
+func (s *GetAggTradesService) Do(ctx context.Context) ([]AggTrade, error) {
+	req := request.Get(ctx, s.c, "/fapi/v3/aggTrades", s.params)
+	resp, err := request.Do[[]AggTrade](req)
+	if err != nil {
+		return nil, err
+	}
+	return *resp, nil
+}
+
+type AggTrade struct {
+	AggTradeID   int64           `json:"a"`
+	Price        decimal.Decimal `json:"p"`
+	Qty          decimal.Decimal `json:"q"`
+	FirstTradeID int64           `json:"f"`
+	LastTradeID  int64           `json:"l"`
+	Timestamp    time.Time       `json:"T,format:unixmilli"`
+	IsBuyerMaker bool            `json:"m"`
+}
+
+// GetKlinesService -- GET /fapi/v3/klines
+type GetKlinesService struct {
+	c      *FuturesClient
+	params map[string]string
+	path   string
+}
+
+func (c *FuturesClient) NewGetKlinesService(symbol string, interval KlineInterval) *GetKlinesService {
+	return &GetKlinesService{c: c, path: "/fapi/v3/klines", params: map[string]string{
+		"symbol":   symbol,
+		"interval": string(interval),
+	}}
+}
+
+// NewGetIndexPriceKlinesService -- GET /fapi/v3/indexPriceKlines (note: pair, not symbol)
+func (c *FuturesClient) NewGetIndexPriceKlinesService(pair string, interval KlineInterval) *GetKlinesService {
+	return &GetKlinesService{c: c, path: "/fapi/v3/indexPriceKlines", params: map[string]string{
+		"pair":     pair,
+		"interval": string(interval),
+	}}
+}
+
+// NewGetMarkPriceKlinesService -- GET /fapi/v3/markPriceKlines
+func (c *FuturesClient) NewGetMarkPriceKlinesService(symbol string, interval KlineInterval) *GetKlinesService {
+	return &GetKlinesService{c: c, path: "/fapi/v3/markPriceKlines", params: map[string]string{
+		"symbol":   symbol,
+		"interval": string(interval),
+	}}
+}
+
+func (s *GetKlinesService) SetStartTime(t time.Time) *GetKlinesService {
+	s.params["startTime"] = strconv.FormatInt(t.UnixMilli(), 10)
+	return s
+}
+
+func (s *GetKlinesService) SetEndTime(t time.Time) *GetKlinesService {
+	s.params["endTime"] = strconv.FormatInt(t.UnixMilli(), 10)
+	return s
+}
+
+func (s *GetKlinesService) SetLimit(limit int) *GetKlinesService {
+	s.params["limit"] = strconv.Itoa(limit)
+	return s
+}
+
+// Do returns parsed klines. Index/Mark price klines return rows with extra
+// "ignore" trailing fields; we only populate the meaningful columns.
+func (s *GetKlinesService) Do(ctx context.Context) ([]Kline, error) {
+	req := request.Get(ctx, s.c, s.path, s.params)
+	raw, err := request.Do[[][]any](req)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]Kline, 0, len(*raw))
+	for _, row := range *raw {
+		k, err := parseKline(row)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, k)
+	}
+	return out, nil
+}
+
+type Kline struct {
+	OpenTime                 time.Time
+	Open                     decimal.Decimal
+	High                     decimal.Decimal
+	Low                      decimal.Decimal
+	Close                    decimal.Decimal
+	Volume                   decimal.Decimal
+	CloseTime                time.Time
+	QuoteAssetVolume         decimal.Decimal
+	NumberOfTrades           int64
+	TakerBuyBaseAssetVolume  decimal.Decimal
+	TakerBuyQuoteAssetVolume decimal.Decimal
+}
+
+func parseKline(row []any) (Kline, error) {
+	asDecimal := func(v any) (decimal.Decimal, error) {
+		s, ok := v.(string)
+		if !ok {
+			return decimal.Zero, errInvalidKlineRow
+		}
+		return decimal.NewFromString(s)
+	}
+	asInt := func(v any) (int64, error) {
+		switch x := v.(type) {
+		case float64:
+			return int64(x), nil
+		case int64:
+			return x, nil
+		case int:
+			return int64(x), nil
+		}
+		return 0, errInvalidKlineRow
+	}
+	if len(row) < 11 {
+		return Kline{}, errInvalidKlineRow
+	}
+	openMs, err := asInt(row[0])
+	if err != nil {
+		return Kline{}, err
+	}
+	closeMs, err := asInt(row[6])
+	if err != nil {
+		return Kline{}, err
+	}
+	open, err := asDecimal(row[1])
+	if err != nil {
+		return Kline{}, err
+	}
+	high, err := asDecimal(row[2])
+	if err != nil {
+		return Kline{}, err
+	}
+	low, err := asDecimal(row[3])
+	if err != nil {
+		return Kline{}, err
+	}
+	cl, err := asDecimal(row[4])
+	if err != nil {
+		return Kline{}, err
+	}
+	vol, err := asDecimal(row[5])
+	if err != nil {
+		return Kline{}, err
+	}
+	quoteVol, err := asDecimal(row[7])
+	if err != nil {
+		return Kline{}, err
+	}
+	numTrades, err := asInt(row[8])
+	if err != nil {
+		return Kline{}, err
+	}
+	takerBase, err := asDecimal(row[9])
+	if err != nil {
+		return Kline{}, err
+	}
+	takerQuote, err := asDecimal(row[10])
+	if err != nil {
+		return Kline{}, err
+	}
+	return Kline{
+		OpenTime:                 time.UnixMilli(openMs),
+		Open:                     open,
+		High:                     high,
+		Low:                      low,
+		Close:                    cl,
+		Volume:                   vol,
+		CloseTime:                time.UnixMilli(closeMs),
+		QuoteAssetVolume:         quoteVol,
+		NumberOfTrades:           numTrades,
+		TakerBuyBaseAssetVolume:  takerBase,
+		TakerBuyQuoteAssetVolume: takerQuote,
+	}, nil
+}
+
+var errInvalidKlineRow = errInvalidRow("invalid kline row")
+
+type errInvalidRow string
+
+func (e errInvalidRow) Error() string { return string(e) }
+
+// GetPremiumIndexService -- GET /fapi/v3/premiumIndex
+//
+// When symbol is empty the API returns an array; the typed accessor returns
+// []PremiumIndex regardless to keep the call site uniform.
+type GetPremiumIndexService struct {
+	c      *FuturesClient
+	params map[string]string
+}
+
+func (c *FuturesClient) NewGetPremiumIndexService() *GetPremiumIndexService {
+	return &GetPremiumIndexService{c: c, params: map[string]string{}}
+}
+
+func (s *GetPremiumIndexService) SetSymbol(symbol string) *GetPremiumIndexService {
+	s.params["symbol"] = symbol
+	return s
+}
+
+func (s *GetPremiumIndexService) Do(ctx context.Context) ([]PremiumIndex, error) {
+	req := request.Get(ctx, s.c, "/fapi/v3/premiumIndex", s.params)
+	if _, ok := s.params["symbol"]; ok {
+		single, err := request.Do[PremiumIndex](req)
+		if err != nil {
+			return nil, err
+		}
+		return []PremiumIndex{*single}, nil
+	}
+	multi, err := request.Do[[]PremiumIndex](req)
+	if err != nil {
+		return nil, err
+	}
+	return *multi, nil
+}
+
+type PremiumIndex struct {
 	Symbol               string          `json:"symbol"`
 	MarkPrice            decimal.Decimal `json:"markPrice"`
 	IndexPrice           decimal.Decimal `json:"indexPrice"`
@@ -352,74 +421,76 @@ type PremiumIndexResponse struct {
 	Time                 time.Time       `json:"time,format:unixmilli"`
 }
 
-type FundingRateService struct {
+// GetFundingRateService -- GET /fapi/v3/fundingRate
+type GetFundingRateService struct {
 	c      *FuturesClient
 	params map[string]string
 }
 
-func (c *FuturesClient) NewFundingRateService() *FundingRateService {
-	return &FundingRateService{c: c, params: map[string]string{}}
+func (c *FuturesClient) NewGetFundingRateService() *GetFundingRateService {
+	return &GetFundingRateService{c: c, params: map[string]string{}}
 }
 
-func (s *FundingRateService) SetSymbol(symbol string) *FundingRateService {
+func (s *GetFundingRateService) SetSymbol(symbol string) *GetFundingRateService {
 	s.params["symbol"] = symbol
 	return s
 }
 
-func (s *FundingRateService) SetStartTime(startTime time.Time) *FundingRateService {
-	s.params["startTime"] = strconv.FormatInt(startTime.UnixMilli(), 10)
+func (s *GetFundingRateService) SetStartTime(t time.Time) *GetFundingRateService {
+	s.params["startTime"] = strconv.FormatInt(t.UnixMilli(), 10)
 	return s
 }
 
-func (s *FundingRateService) SetEndTime(endTime time.Time) *FundingRateService {
-	s.params["endTime"] = strconv.FormatInt(endTime.UnixMilli(), 10)
+func (s *GetFundingRateService) SetEndTime(t time.Time) *GetFundingRateService {
+	s.params["endTime"] = strconv.FormatInt(t.UnixMilli(), 10)
 	return s
 }
 
-func (s *FundingRateService) SetLimit(limit int) *FundingRateService {
+func (s *GetFundingRateService) SetLimit(limit int) *GetFundingRateService {
 	s.params["limit"] = strconv.Itoa(limit)
 	return s
 }
 
-func (s *FundingRateService) Do(ctx context.Context) ([]FundingRateResponse, error) {
-	req := request.Get(ctx, s.c, "/fapi/v1/fundingRate", s.params)
-	resp, err := request.Do[[]FundingRateResponse](req)
+func (s *GetFundingRateService) Do(ctx context.Context) ([]FundingRate, error) {
+	req := request.Get(ctx, s.c, "/fapi/v3/fundingRate", s.params)
+	resp, err := request.Do[[]FundingRate](req)
 	if err != nil {
 		return nil, err
 	}
 	return *resp, nil
 }
 
-type FundingRateResponse struct {
+type FundingRate struct {
 	Symbol      string          `json:"symbol"`
 	FundingRate decimal.Decimal `json:"fundingRate"`
 	FundingTime time.Time       `json:"fundingTime,format:unixmilli"`
 }
 
-type FundingInfoService struct {
+// GetFundingInfoService -- GET /fapi/v3/fundingInfo
+type GetFundingInfoService struct {
 	c      *FuturesClient
 	params map[string]string
 }
 
-func (c *FuturesClient) NewFundingInfoService() *FundingInfoService {
-	return &FundingInfoService{c: c, params: map[string]string{}}
+func (c *FuturesClient) NewGetFundingInfoService() *GetFundingInfoService {
+	return &GetFundingInfoService{c: c, params: map[string]string{}}
 }
 
-func (s *FundingInfoService) SetSymbol(symbol string) *FundingInfoService {
+func (s *GetFundingInfoService) SetSymbol(symbol string) *GetFundingInfoService {
 	s.params["symbol"] = symbol
 	return s
 }
 
-func (s *FundingInfoService) Do(ctx context.Context) ([]FundingInfoResponse, error) {
-	req := request.Get(ctx, s.c, "/fapi/v1/fundingInfo", s.params)
-	resp, err := request.Do[[]FundingInfoResponse](req)
+func (s *GetFundingInfoService) Do(ctx context.Context) ([]FundingInfo, error) {
+	req := request.Get(ctx, s.c, "/fapi/v3/fundingInfo", s.params)
+	resp, err := request.Do[[]FundingInfo](req)
 	if err != nil {
 		return nil, err
 	}
 	return *resp, nil
 }
 
-type FundingInfoResponse struct {
+type FundingInfo struct {
 	Symbol               string          `json:"symbol"`
 	InterestRate         decimal.Decimal `json:"interestRate"`
 	Time                 time.Time       `json:"time,format:unixmilli"`
@@ -428,29 +499,38 @@ type FundingInfoResponse struct {
 	FundingFeeFloor      decimal.Decimal `json:"fundingFeeFloor"`
 }
 
-type Ticker24hrService struct {
-	c *FuturesClient
+// Get24hTickerService -- GET /fapi/v3/ticker/24hr
+type Get24hTickerService struct {
+	c      *FuturesClient
+	params map[string]string
 }
 
-func (c *FuturesClient) NewTicker24hrService() *Ticker24hrService {
-	return &Ticker24hrService{c: c}
+func (c *FuturesClient) NewGet24hTickerService() *Get24hTickerService {
+	return &Get24hTickerService{c: c, params: map[string]string{}}
 }
 
-func (s *Ticker24hrService) Do(ctx context.Context, symbol string) (*Ticker24hrResponse, error) {
-	req := request.Get(ctx, s.c, "/fapi/v1/ticker/24hr", map[string]string{"symbol": symbol})
-	return request.Do[Ticker24hrResponse](req)
+func (s *Get24hTickerService) SetSymbol(symbol string) *Get24hTickerService {
+	s.params["symbol"] = symbol
+	return s
 }
 
-func (s *Ticker24hrService) DoAll(ctx context.Context) ([]Ticker24hrResponse, error) {
-	req := request.Get(ctx, s.c, "/fapi/v1/ticker/24hr")
-	resp, err := request.Do[[]Ticker24hrResponse](req)
+func (s *Get24hTickerService) Do(ctx context.Context) ([]Ticker24h, error) {
+	req := request.Get(ctx, s.c, "/fapi/v3/ticker/24hr", s.params)
+	if _, ok := s.params["symbol"]; ok {
+		single, err := request.Do[Ticker24h](req)
+		if err != nil {
+			return nil, err
+		}
+		return []Ticker24h{*single}, nil
+	}
+	multi, err := request.Do[[]Ticker24h](req)
 	if err != nil {
 		return nil, err
 	}
-	return *resp, nil
+	return *multi, nil
 }
 
-type Ticker24hrResponse struct {
+type Ticker24h struct {
 	Symbol             string          `json:"symbol"`
 	PriceChange        decimal.Decimal `json:"priceChange"`
 	PriceChangePercent decimal.Decimal `json:"priceChangePercent"`
@@ -470,61 +550,109 @@ type Ticker24hrResponse struct {
 	Count              int64           `json:"count"`
 }
 
-type TickerPriceService struct {
-	c *FuturesClient
+// GetTickerPriceService -- GET /fapi/v3/ticker/price
+type GetTickerPriceService struct {
+	c      *FuturesClient
+	params map[string]string
 }
 
-func (c *FuturesClient) NewTickerPriceService() *TickerPriceService {
-	return &TickerPriceService{c: c}
+func (c *FuturesClient) NewGetTickerPriceService() *GetTickerPriceService {
+	return &GetTickerPriceService{c: c, params: map[string]string{}}
 }
 
-func (s *TickerPriceService) Do(ctx context.Context, symbol string) (*TickerPriceResponse, error) {
-	req := request.Get(ctx, s.c, "/fapi/v1/ticker/price", map[string]string{"symbol": symbol})
-	return request.Do[TickerPriceResponse](req)
+func (s *GetTickerPriceService) SetSymbol(symbol string) *GetTickerPriceService {
+	s.params["symbol"] = symbol
+	return s
 }
 
-func (s *TickerPriceService) DoAll(ctx context.Context) ([]TickerPriceResponse, error) {
-	req := request.Get(ctx, s.c, "/fapi/v1/ticker/price")
-	resp, err := request.Do[[]TickerPriceResponse](req)
+func (s *GetTickerPriceService) Do(ctx context.Context) ([]TickerPrice, error) {
+	req := request.Get(ctx, s.c, "/fapi/v3/ticker/price", s.params)
+	if _, ok := s.params["symbol"]; ok {
+		single, err := request.Do[TickerPrice](req)
+		if err != nil {
+			return nil, err
+		}
+		return []TickerPrice{*single}, nil
+	}
+	multi, err := request.Do[[]TickerPrice](req)
 	if err != nil {
 		return nil, err
 	}
-	return *resp, nil
+	return *multi, nil
 }
 
-type TickerPriceResponse struct {
+type TickerPrice struct {
 	Symbol string          `json:"symbol"`
 	Price  decimal.Decimal `json:"price"`
 	Time   time.Time       `json:"time,format:unixmilli"`
 }
 
-type BookTickerService struct {
-	c *FuturesClient
+// GetBookTickerService -- GET /fapi/v3/ticker/bookTicker
+type GetBookTickerService struct {
+	c      *FuturesClient
+	params map[string]string
 }
 
-func (c *FuturesClient) NewBookTickerService() *BookTickerService {
-	return &BookTickerService{c: c}
+func (c *FuturesClient) NewGetBookTickerService() *GetBookTickerService {
+	return &GetBookTickerService{c: c, params: map[string]string{}}
 }
 
-func (s *BookTickerService) Do(ctx context.Context, symbol string) (*BookTickerResponse, error) {
-	req := request.Get(ctx, s.c, "/fapi/v1/ticker/bookTicker", map[string]string{"symbol": symbol})
-	return request.Do[BookTickerResponse](req)
+func (s *GetBookTickerService) SetSymbol(symbol string) *GetBookTickerService {
+	s.params["symbol"] = symbol
+	return s
 }
 
-func (s *BookTickerService) DoAll(ctx context.Context) ([]BookTickerResponse, error) {
-	req := request.Get(ctx, s.c, "/fapi/v1/ticker/bookTicker")
-	resp, err := request.Do[[]BookTickerResponse](req)
+func (s *GetBookTickerService) Do(ctx context.Context) ([]BookTicker, error) {
+	req := request.Get(ctx, s.c, "/fapi/v3/ticker/bookTicker", s.params)
+	if _, ok := s.params["symbol"]; ok {
+		single, err := request.Do[BookTicker](req)
+		if err != nil {
+			return nil, err
+		}
+		return []BookTicker{*single}, nil
+	}
+	multi, err := request.Do[[]BookTicker](req)
 	if err != nil {
 		return nil, err
 	}
-	return *resp, nil
+	return *multi, nil
 }
 
-type BookTickerResponse struct {
+type BookTicker struct {
 	Symbol   string          `json:"symbol"`
 	BidPrice decimal.Decimal `json:"bidPrice"`
 	BidQty   decimal.Decimal `json:"bidQty"`
 	AskPrice decimal.Decimal `json:"askPrice"`
 	AskQty   decimal.Decimal `json:"askQty"`
 	Time     time.Time       `json:"time,format:unixmilli"`
+}
+
+// GetIndexReferencesService -- GET /fapi/v3/indexreferences
+//
+// Returns the source-exchange weights used to compute the index price for a
+// symbol. Useful for understanding how mark price diverges from spot.
+type GetIndexReferencesService struct {
+	c      *FuturesClient
+	params map[string]string
+}
+
+func (c *FuturesClient) NewGetIndexReferencesService(symbol string) *GetIndexReferencesService {
+	return &GetIndexReferencesService{c: c, params: map[string]string{"symbol": symbol}}
+}
+
+func (s *GetIndexReferencesService) Do(ctx context.Context) (*IndexReferences, error) {
+	req := request.Get(ctx, s.c, "/fapi/v3/indexreferences", s.params)
+	return request.Do[IndexReferences](req)
+}
+
+type IndexReferences struct {
+	Symbol     string           `json:"symbol"`
+	Time       time.Time        `json:"time,format:unixmilli"`
+	References []IndexReference `json:"references"`
+}
+
+type IndexReference struct {
+	Exchange string          `json:"exchange"`
+	Symbol   string          `json:"symbol"`
+	Weight   decimal.Decimal `json:"weight"`
 }

@@ -2,16 +2,67 @@ package futures
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"time"
 
-	"github.com/UnipayFI/go-aster/common"
-	"github.com/UnipayFI/go-aster/request"
+	"github.com/UnipayFI/go-aster/v3/common"
+	"github.com/UnipayFI/go-aster/v3/request"
+	"github.com/go-json-experiment/json"
 	"github.com/shopspring/decimal"
-	"github.com/tidwall/gjson"
 )
 
+// CreateListenKeyService -- POST /fapi/v3/listenKey (USER_STREAM)
+type CreateListenKeyService struct {
+	c *FuturesClient
+}
+
+func (c *FuturesClient) NewCreateListenKeyService() *CreateListenKeyService {
+	return &CreateListenKeyService{c: c}
+}
+
+func (s *CreateListenKeyService) Do(ctx context.Context) (*ListenKeyResponse, error) {
+	req := request.Post(s.c, ctx, "/fapi/v3/listenKey").WithSignature()
+	return request.Do[ListenKeyResponse](req)
+}
+
+type ListenKeyResponse struct {
+	ListenKey string `json:"listenKey"`
+}
+
+// RenewListenKeyService -- PUT /fapi/v3/listenKey (USER_STREAM)
+//
+// Unlike spot, futures keepalive takes no params (the listenKey is implied
+// by the signer). Recommended to call every ~60 minutes.
+type RenewListenKeyService struct {
+	c *FuturesClient
+}
+
+func (c *FuturesClient) NewRenewListenKeyService() *RenewListenKeyService {
+	return &RenewListenKeyService{c: c}
+}
+
+func (s *RenewListenKeyService) Do(ctx context.Context) error {
+	req := request.Put(ctx, s.c, "/fapi/v3/listenKey").WithSignature()
+	_, err := request.Do[struct{}](req)
+	return err
+}
+
+// DeleteListenKeyService -- DELETE /fapi/v3/listenKey (USER_STREAM)
+type DeleteListenKeyService struct {
+	c *FuturesClient
+}
+
+func (c *FuturesClient) NewDeleteListenKeyService() *DeleteListenKeyService {
+	return &DeleteListenKeyService{c: c}
+}
+
+func (s *DeleteListenKeyService) Do(ctx context.Context) error {
+	req := request.Delete(ctx, s.c, "/fapi/v3/listenKey").WithSignature()
+	_, err := request.Do[struct{}](req)
+	return err
+}
+
+// SubscribeUserDataStreamService streams the discriminated union of futures
+// user-data events. Inspect EventType, then read the matching pointer field.
 type SubscribeUserDataStreamService struct {
 	c         *FuturesWebSocketClient
 	listenKey string
@@ -21,199 +72,226 @@ func (c *FuturesWebSocketClient) NewSubscribeUserDataStreamService(listenKey str
 	return &SubscribeUserDataStreamService{c: c, listenKey: listenKey}
 }
 
-func (s *SubscribeUserDataStreamService) Do(ctx context.Context, handler UserDataHandler) (done chan<- struct{}, stop <-chan struct{}, err error) {
-	callback := func(message *json.RawMessage, err error) {
+func (s *SubscribeUserDataStreamService) Do(ctx context.Context, cb func(*WsUserDataEvent, error)) (chan<- struct{}, <-chan struct{}, error) {
+	endpoint := common.WEBSOCKET_STREAM_SEPARATOR + s.listenKey
+	return request.SubscribeRaw(ctx, s.c, endpoint, func(msg []byte, err error) {
 		if err != nil {
-			handler.OnError(err)
+			cb(nil, err)
 			return
 		}
+		ev, decodeErr := decodeUserDataEvent(msg)
+		cb(ev, decodeErr)
+	})
+}
 
-		switch UserDataEventType(gjson.GetBytes(*message, "e").String()) {
-		case AccountUpdate:
-			handleEvent(s, message, &WsAccountUpdateEvent{}, handler.OnAccountUpdate, handler.OnError)
-		case OrderTradeUpdate:
-			handleEvent(s, message, &WsOrderTradeUpdateEvent{}, handler.OnOrderTradeUpdate, handler.OnError)
-		case AccountConfigUpdate:
-			handleEvent(s, message, &WsAccountConfigUpdateEvent{}, handler.OnAccountConfigUpdate, handler.OnError)
-		case MarginCall:
-			handleEvent(s, message, &WsMarginCallEvent{}, handler.OnMarginCall, handler.OnError)
-		case ListenKeyExpired:
-			handleEvent(s, message, &WsListenKeyExpiredEvent{}, handler.OnListenKeyExpired, handler.OnError)
-		default:
-			handler.OnError(fmt.Errorf("unknown event type: %s", gjson.GetBytes(*message, "e").String()))
-			return
+func decodeUserDataEvent(msg []byte) (*WsUserDataEvent, error) {
+	var head struct {
+		EventType string `json:"e"`
+	}
+	if err := json.Unmarshal(msg, &head); err != nil {
+		return nil, err
+	}
+	ev := &WsUserDataEvent{
+		EventType: head.EventType,
+		Raw:       msg,
+	}
+	switch head.EventType {
+	case "listenKeyExpired":
+		var x WsListenKeyExpiredEvent
+		if err := json.Unmarshal(msg, &x); err != nil {
+			return ev, err
 		}
+		ev.ListenKeyExpired = &x
+		ev.EventTime = x.EventTime
+	case "MARGIN_CALL":
+		var x WsMarginCallEvent
+		if err := json.Unmarshal(msg, &x); err != nil {
+			return ev, err
+		}
+		ev.MarginCall = &x
+		ev.EventTime = x.EventTime
+	case "ACCOUNT_UPDATE":
+		var x WsAccountUpdateEvent
+		if err := json.Unmarshal(msg, &x); err != nil {
+			return ev, err
+		}
+		ev.AccountUpdate = &x
+		ev.EventTime = x.EventTime
+	case "ORDER_TRADE_UPDATE":
+		var x WsOrderTradeUpdateEvent
+		if err := json.Unmarshal(msg, &x); err != nil {
+			return ev, err
+		}
+		ev.OrderTradeUpdate = &x
+		ev.EventTime = x.EventTime
+	case "ACCOUNT_CONFIG_UPDATE":
+		var x WsAccountConfigUpdateEvent
+		if err := json.Unmarshal(msg, &x); err != nil {
+			return ev, err
+		}
+		ev.AccountConfigUpdate = &x
+		ev.EventTime = x.EventTime
+	case "tradepro":
+		var x WsTradeProEvent
+		if err := json.Unmarshal(msg, &x); err != nil {
+			return ev, err
+		}
+		ev.TradePro = &x
+		ev.EventTime = x.EventTime
 	}
-
-	return request.Subscribe(ctx, s.c, common.WEBSOCKET_STREAM_SEPARATOR+s.listenKey, callback)
+	return ev, nil
 }
 
-func handleEvent[T any](s *SubscribeUserDataStreamService, message *json.RawMessage, target *T, handle func(*T), onError func(error)) {
-	if err := s.c.GetHttpClient().JSONUnmarshal(*message, target); err != nil {
-		onError(err)
-		return
-	}
-	handle(target)
-}
-
-type UserDataHandler interface {
-	OnAccountUpdate(message *WsAccountUpdateEvent)
-	OnOrderTradeUpdate(message *WsOrderTradeUpdateEvent)
-	OnAccountConfigUpdate(message *WsAccountConfigUpdateEvent)
-	OnMarginCall(message *WsMarginCallEvent)
-	OnListenKeyExpired(message *WsListenKeyExpiredEvent)
-	OnError(err error)
-}
-
-type WsAccountUpdateEvent struct {
-	WsBaseEvent
-	TransactionTime time.Time       `json:"T,format:unixmilli"`
-	AccountUpdate   WsAccountUpdate `json:"a"`
-}
-
-type WsAccountUpdate struct {
-	Reason    AccountUpdateReason `json:"m"`
-	Balances  []WsAccountBalance  `json:"B"`
-	Positions []WsAccountPosition `json:"P"`
-}
-
-type WsAccountBalance struct {
-	Asset              string          `json:"a"`
-	WalletBalance      decimal.Decimal `json:"wb"`
-	CrossWalletBalance decimal.Decimal `json:"cw"`
-	ChangeBalance      decimal.Decimal `json:"bc"`
-}
-
-type WsAccountPosition struct {
-	Symbol              string          `json:"s"`
-	PositionAmount      decimal.Decimal `json:"pa"`
-	EntryPrice          decimal.Decimal `json:"ep"`
-	AccumulatedRealized decimal.Decimal `json:"cr"`
-	UnrealizedPnL       decimal.Decimal `json:"up"`
-	MarginType          MarginType      `json:"mt"`
-	IsolatedWallet      decimal.Decimal `json:"iw"`
-	Side                PositionSide    `json:"ps"`
-}
-
-type WsOrderTradeUpdateEvent struct {
-	WsBaseEvent
-	TransactionTime  time.Time          `json:"T,format:unixmilli"`
-	OrderTradeUpdate WsOrderTradeUpdate `json:"o"`
-}
-
-type WsOrderTradeUpdate struct {
-	Symbol               string          `json:"s"`                  // Symbol
-	ClientOrderId        string          `json:"c"`                  // Client order ID
-	Side                 OrderSide       `json:"S"`                  // Side
-	OrderType            OrderType       `json:"o"`                  // Order type
-	TimeInForce          TimeInForce     `json:"f"`                  // Time in force
-	OriginalQty          decimal.Decimal `json:"q"`                  // Original quantity
-	OriginalPrice        decimal.Decimal `json:"p"`                  // Original price
-	AveragePrice         decimal.Decimal `json:"ap"`                 // Average price
-	StopPrice            decimal.Decimal `json:"sp"`                 // Stop price. Please ignore with TRAILING_STOP_MARKET order
-	ExecutionType        ExecutionType   `json:"x"`                  // Execution type
-	Status               OrderStatus     `json:"X"`                  // Order status
-	ID                   int64           `json:"i"`                  // Order ID
-	LastFilledQty        decimal.Decimal `json:"l"`                  // Order Last Filled Quantity
-	AccumulatedFilledQty decimal.Decimal `json:"z"`                  // Order Filled Accumulated Quantity
-	LastFilledPrice      decimal.Decimal `json:"L"`                  // Last Filled Price
-	CommissionAsset      string          `json:"N"`                  // Commission Asset, will not push if no commission
-	CommissionAmount     decimal.Decimal `json:"n"`                  // Commission, will not push if no commission
-	TradeTime            time.Time       `json:"T,format:unixmilli"` // Order Trade Time
-	TradeID              int64           `json:"t"`                  // Trade ID
-	BidsNotional         decimal.Decimal `json:"b"`                  // Bids Notional
-	AsksNotional         decimal.Decimal `json:"a"`                  // Asks Notional
-	IsMaker              bool            `json:"m"`                  // Is this trade the maker side?
-	IsReduceOnly         bool            `json:"R"`                  // Is this reduce only
-	WorkingType          WorkingType     `json:"wt"`                 // Stop Price Working Type
-	OriginalOrderType    OrderType       `json:"ot"`                 // Original Order Type
-	PositionSide         PositionSide    `json:"ps"`                 // Position Side
-	IsClosingPosition    bool            `json:"cp"`                 // If Close-All, pushed with conditional order
-	ActivationPrice      decimal.Decimal `json:"AP"`                 // Activation Price, only puhed with TRAILING_STOP_MARKET order
-	CallbackRate         decimal.Decimal `json:"cr"`                 //Callback Rate, only puhed with TRAILING_STOP_MARKET order
-	RealizedProfit       decimal.Decimal `json:"rp"`                 // Realized Profit of the trade
-}
-
-type ExecutionType string
-
-const (
-	NEW        ExecutionType = "NEW"
-	CANCELED   ExecutionType = "CANCELED"
-	CALCULATED ExecutionType = "CALCULATED"
-	EXPIRED    ExecutionType = "EXPIRED"
-	TRADE      ExecutionType = "TRADE"
-)
-
-type WsAccountConfigUpdateEvent struct {
-	WsBaseEvent
-	TransactionTime      time.Time               `json:"T,format:unixmilli"`
-	SymbolLeverageUpdate *WsSymbolLeverageUpdate `json:"ac"`
-	UserAccountUpdate    *WsUserAccountUpdate    `json:"u"`
-}
-
-type WsSymbolLeverageUpdate struct {
-	Symbol   string `json:"s"`
-	Leverage int64  `json:"l"`
-}
-
-type WsMarginCallEvent struct {
-	WsBaseEvent
-	CrossWalletBalance decimal.Decimal        `json:"cw"`
-	Positions          []WsMarginCallPosition `json:"p"`
-}
-
-type WsMarginCallPosition struct {
-	Symbol            string          `json:"s"`
-	PositionSide      PositionSide    `json:"ps"`
-	PositionAmount    decimal.Decimal `json:"pa"`
-	MarginType        MarginType      `json:"mt"`
-	IsolatedWallet    decimal.Decimal `json:"iw"`
-	MarkPrice         decimal.Decimal `json:"mp"`
-	UnrealizedPnL     decimal.Decimal `json:"up"`
-	MaintenanceMargin decimal.Decimal `json:"mm"`
-}
-
-type WsUserAccountUpdate struct {
-	MultiAssetsMode            bool `json:"j"` // Multi-Assets Mode
-	SpecifiedTokenFeeDeduction bool `json:"f"` // Specified token fee deduction
-	PositionMode               bool `json:"d"` // Position mode: true for dual-side (hedge) mode, false for single-side (one-way) mode
+// WsUserDataEvent is the discriminated union of every event the futures
+// user-data stream can deliver. Inspect EventType to know which pointer
+// field is populated; Raw is always present for forward-compat.
+type WsUserDataEvent struct {
+	EventType           string
+	EventTime           time.Time
+	Raw                 []byte
+	ListenKeyExpired    *WsListenKeyExpiredEvent
+	MarginCall          *WsMarginCallEvent
+	AccountUpdate       *WsAccountUpdateEvent
+	OrderTradeUpdate    *WsOrderTradeUpdateEvent
+	AccountConfigUpdate *WsAccountConfigUpdateEvent
+	TradePro            *WsTradeProEvent
 }
 
 type WsListenKeyExpiredEvent struct {
-	WsBaseEvent
+	EventType string    `json:"e"`
+	EventTime time.Time `json:"E,format:unixmilli"`
 }
 
-type WsBaseEvent struct {
-	Event UserDataEventType `json:"e"`
-	Time  time.Time         `json:"E,format:unixmilli"`
+type WsMarginCallEvent struct {
+	EventType          string                  `json:"e"`
+	EventTime          time.Time               `json:"E,format:unixmilli"`
+	CrossWalletBalance decimal.Decimal         `json:"cw"`
+	Positions          []WsMarginCallPosition  `json:"p"`
 }
 
-type AccountUpdateReason string
+type WsMarginCallPosition struct {
+	Symbol         string          `json:"s"`
+	PositionSide   PositionSide    `json:"ps"`
+	PositionAmount decimal.Decimal `json:"pa"`
+	MarginType     string          `json:"mt"`
+	IsolatedWallet decimal.Decimal `json:"iw"`
+	MarkPrice      decimal.Decimal `json:"mp"`
+	UnrealizedPnL  decimal.Decimal `json:"up"`
+	MaintMargin    decimal.Decimal `json:"mm"`
+}
 
-const (
-	DEPOSIT               AccountUpdateReason = "DEPOSIT"
-	WITHDRAW              AccountUpdateReason = "WITHDRAW"
-	ORDER                 AccountUpdateReason = "ORDER"
-	FUNDING_FEE           AccountUpdateReason = "FUNDING_FEE"
-	WITHDRAW_REJECT       AccountUpdateReason = "WITHDRAW_REJECT"
-	ADJUSTMENT            AccountUpdateReason = "ADJUSTMENT"
-	INSURANCE_CLEAR       AccountUpdateReason = "INSURANCE_CLEAR"
-	ADMIN_DEPOSIT         AccountUpdateReason = "ADMIN_DEPOSIT"
-	ADMIN_WITHDRAW        AccountUpdateReason = "ADMIN_WITHDRAW"
-	MARGIN_TRANSFER       AccountUpdateReason = "MARGIN_TRANSFER"
-	MARGIN_TYPE_CHANGE    AccountUpdateReason = "MARGIN_TYPE_CHANGE"
-	ASSET_TRANSFER        AccountUpdateReason = "ASSET_TRANSFER"
-	OPTIONS_PREMIUM_FEE   AccountUpdateReason = "OPTIONS_PREMIUM_FEE"
-	OPTIONS_SETTLE_PROFIT AccountUpdateReason = "OPTIONS_SETTLE_PROFIT"
-	AUTO_EXCHANGE         AccountUpdateReason = "AUTO_EXCHANGE"
-)
+type WsAccountUpdateEvent struct {
+	EventType       string             `json:"e"`
+	EventTime       time.Time          `json:"E,format:unixmilli"`
+	TransactionTime time.Time          `json:"T,format:unixmilli"`
+	UpdateData      WsAccountUpdateRO  `json:"a"`
+}
 
-type UserDataEventType string
+type WsAccountUpdateRO struct {
+	EventReasonType string                  `json:"m"`
+	Balances        []WsAccountUpdateBal    `json:"B"`
+	Positions       []WsAccountUpdatePos    `json:"P"`
+}
 
-const (
-	AccountUpdate       UserDataEventType = "ACCOUNT_UPDATE"
-	OrderTradeUpdate    UserDataEventType = "ORDER_TRADE_UPDATE"
-	AccountConfigUpdate UserDataEventType = "ACCOUNT_CONFIG_UPDATE"
-	MarginCall          UserDataEventType = "MARGIN_CALL"
-	ListenKeyExpired    UserDataEventType = "listenKeyExpired"
-)
+type WsAccountUpdateBal struct {
+	Asset              string          `json:"a"`
+	WalletBalance      decimal.Decimal `json:"wb"`
+	CrossWalletBalance decimal.Decimal `json:"cw"`
+	BalanceChange      decimal.Decimal `json:"bc"`
+}
+
+type WsAccountUpdatePos struct {
+	Symbol               string          `json:"s"`
+	PositionAmount       decimal.Decimal `json:"pa"`
+	EntryPrice           decimal.Decimal `json:"ep"`
+	AccumulatedRealized  decimal.Decimal `json:"cr"`
+	UnrealizedPnL        decimal.Decimal `json:"up"`
+	MarginType           string          `json:"mt"`
+	IsolatedWallet       decimal.Decimal `json:"iw"`
+	PositionSide         PositionSide    `json:"ps"`
+}
+
+// WsOrderTradeUpdateEvent corresponds to e=="ORDER_TRADE_UPDATE".
+type WsOrderTradeUpdateEvent struct {
+	EventType       string                 `json:"e"`
+	EventTime       time.Time              `json:"E,format:unixmilli"`
+	TransactionTime time.Time              `json:"T,format:unixmilli"`
+	Order           WsOrderTradeUpdateRO   `json:"o"`
+}
+
+// WsOrderTradeUpdateRO holds the order-update payload. ExecutionType values:
+// NEW / CANCELED / CALCULATED / EXPIRED / TRADE. OrderStatus may also include
+// NEW_INSURANCE / NEW_ADL for liquidation paths.
+type WsOrderTradeUpdateRO struct {
+	Symbol                 string          `json:"s"`
+	ClientOrderID          string          `json:"c"`
+	Side                   OrderSide       `json:"S"`
+	OrderType              OrderType       `json:"o"`
+	TimeInForce            TimeInForce     `json:"f"`
+	OrigQty                decimal.Decimal `json:"q"`
+	OrigPrice              decimal.Decimal `json:"p"`
+	AvgPrice               decimal.Decimal `json:"ap"`
+	StopPrice              decimal.Decimal `json:"sp"`
+	ExecutionType          string          `json:"x"`
+	OrderStatus            string          `json:"X"`
+	OrderID                int64           `json:"i"`
+	LastFilledQty          decimal.Decimal `json:"l"`
+	AccumFilledQty         decimal.Decimal `json:"z"`
+	LastFilledPrice        decimal.Decimal `json:"L"`
+	CommissionAsset        string          `json:"N"`
+	Commission             decimal.Decimal `json:"n"`
+	OrderTradeTime         time.Time       `json:"T,format:unixmilli"`
+	TradeID                int64           `json:"t"`
+	BidsNotional           decimal.Decimal `json:"b"`
+	AskNotional            decimal.Decimal `json:"a"`
+	IsMaker                bool            `json:"m"`
+	IsReduceOnly           bool            `json:"R"`
+	StopPriceWorkingType   WorkingType     `json:"wt"`
+	OrigOrderType          OrderType       `json:"ot"`
+	PositionSide           PositionSide    `json:"ps"`
+	ClosePosition          bool            `json:"cp"`
+	ActivationPrice        decimal.Decimal `json:"AP"`
+	CallbackRate           decimal.Decimal `json:"cr"`
+	RealizedProfit         decimal.Decimal `json:"rp"`
+}
+
+// WsAccountConfigUpdateEvent corresponds to e=="ACCOUNT_CONFIG_UPDATE".
+//
+// One of TradingPair / AccountInfo will be populated; the other stays at its
+// zero value. Inspect TradingPair.Symbol or AccountInfo (zero check) to tell.
+type WsAccountConfigUpdateEvent struct {
+	EventType       string                       `json:"e"`
+	EventTime       time.Time                    `json:"E,format:unixmilli"`
+	TransactionTime time.Time                    `json:"T,format:unixmilli"`
+	TradingPair     *WsAccountConfigTradingPair  `json:"ac,omitempty"`
+	AccountInfo     *WsAccountConfigAccountInfo  `json:"ai,omitempty"`
+}
+
+type WsAccountConfigTradingPair struct {
+	Symbol   string          `json:"s"`
+	Leverage decimal.Decimal `json:"l"`
+}
+
+type WsAccountConfigAccountInfo struct {
+	MultiAssetsMode    bool `json:"j"`
+	TokenFeeDeduction  bool `json:"f"`
+	HedgeMode          bool `json:"d"`
+}
+
+// WsTradeProEvent corresponds to e=="tradepro" (Aster on-chain trade event).
+//
+// Note futures tradepro arrives as a combined-stream wrapped payload (with a
+// leading "stream" envelope), whereas the listenKey-based user stream
+// delivers it as a flat document. We accept the flat form here; if you
+// subscribe via /stream?streams=, unwrap "data" first.
+type WsTradeProEvent struct {
+	EventType       string          `json:"e"`
+	EventTime       time.Time       `json:"E,format:unixmilli"`
+	TradeTime       time.Time       `json:"T,format:unixmilli"`
+	Symbol          string          `json:"s"`
+	TradeID         int64           `json:"t"`
+	Price           decimal.Decimal `json:"p"`
+	Quantity        decimal.Decimal `json:"q"`
+	TransactionHash string          `json:"h"`
+	Participants    []string        `json:"m"`
+}

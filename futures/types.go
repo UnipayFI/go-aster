@@ -1,11 +1,14 @@
 package futures
 
-import (
-	"fmt"
+// OrderSide -- BUY or SELL.
+type OrderSide string
 
-	"github.com/shopspring/decimal"
+const (
+	SideBuy  OrderSide = "BUY"
+	SideSell OrderSide = "SELL"
 )
 
+// PositionSide is BOTH for one-way mode, LONG/SHORT for hedge mode.
 type PositionSide string
 
 const (
@@ -14,48 +17,8 @@ const (
 	PositionSideShort PositionSide = "SHORT"
 )
 
-type MarginType string
-
-const (
-	MarginTypeIsolated MarginType = "ISOLATED"
-	MarginTypeCrossed  MarginType = "CROSSED"
-)
-
-type WorkingType string
-
-const (
-	WorkingTypeMarkPrice     WorkingType = "MARK_PRICE"
-	WorkingTypeContractPrice WorkingType = "CONTRACT_PRICE"
-)
-
-type IncomeType string
-
-const (
-	IncomeTypeTransfer       IncomeType = "TRANSFER"
-	IncomeTypeWelcomeBonus   IncomeType = "WELCOME_BONUS"
-	IncomeTypeRealizedPnl    IncomeType = "REALIZED_PNL"
-	IncomeTypeFundingFee     IncomeType = "FUNDING_FEE"
-	IncomeTypeCommission     IncomeType = "COMMISSION"
-	IncomeTypeInsuranceClear IncomeType = "INSURANCE_CLEAR"
-	IncomeTypeMarketMerchant IncomeType = "MARKET_MERCHANT_RETURN_REWARD"
-)
-
-type ContractType string
-
-const (
-	ContractTypePerpetual ContractType = "PERPETUAL"
-)
-
-type ContractStatus string
-
-const (
-	ContractStatusPendingTrading ContractStatus = "PENDING_TRADING"
-	ContractStatusTrading        ContractStatus = "TRADING"
-	ContractStatusPreSettle      ContractStatus = "PRE_SETTLE"
-	ContractStatusSettling       ContractStatus = "SETTLING"
-	ContractStatusClose          ContractStatus = "CLOSE"
-)
-
+// OrderType covers all V3 futures order types (TRAILING_STOP_MARKET extra
+// over spot).
 type OrderType string
 
 const (
@@ -68,23 +31,7 @@ const (
 	OrderTypeTrailingStopMarket OrderType = "TRAILING_STOP_MARKET"
 )
 
-type TimeInForce string
-
-const (
-	TimeInForceGTC    TimeInForce = "GTC"
-	TimeInForceIOC    TimeInForce = "IOC"
-	TimeInForceFOK    TimeInForce = "FOK"
-	TimeInForceGTX    TimeInForce = "GTX"
-	TimeInForceHidden TimeInForce = "HIDDEN"
-)
-
-type OrderSide string
-
-const (
-	OrderSideBuy  OrderSide = "BUY"
-	OrderSideSell OrderSide = "SELL"
-)
-
+// OrderStatus mirrors the matching engine.
 type OrderStatus string
 
 const (
@@ -96,63 +43,96 @@ const (
 	OrderStatusExpired         OrderStatus = "EXPIRED"
 )
 
-type NewOrderRespType string
+// TimeInForce values accepted by the futures API.
+type TimeInForce string
 
 const (
-	NewOrderRespTypeACK    NewOrderRespType = "ACK"
-	NewOrderRespTypeResult NewOrderRespType = "RESULT"
+	TimeInForceGTC    TimeInForce = "GTC"
+	TimeInForceIOC    TimeInForce = "IOC"
+	TimeInForceFOK    TimeInForce = "FOK"
+	TimeInForceGTX    TimeInForce = "GTX"
+	TimeInForceHidden TimeInForce = "HIDDEN"
 )
 
-type KlineInterval string
+// WorkingType determines what price triggers stop/take-profit orders.
+type WorkingType string
 
 const (
-	KlineInterval1m  KlineInterval = "1m"
-	KlineInterval3m  KlineInterval = "3m"
-	KlineInterval5m  KlineInterval = "5m"
-	KlineInterval15m KlineInterval = "15m"
-	KlineInterval30m KlineInterval = "30m"
-	KlineInterval1h  KlineInterval = "1h"
-	KlineInterval2h  KlineInterval = "2h"
-	KlineInterval4h  KlineInterval = "4h"
-	KlineInterval6h  KlineInterval = "6h"
-	KlineInterval8h  KlineInterval = "8h"
-	KlineInterval12h KlineInterval = "12h"
-	KlineInterval1d  KlineInterval = "1d"
-	KlineInterval3d  KlineInterval = "3d"
-	KlineInterval1w  KlineInterval = "1w"
-	KlineInterval1M  KlineInterval = "1M"
+	WorkingTypeMarkPrice     WorkingType = "MARK_PRICE"
+	WorkingTypeContractPrice WorkingType = "CONTRACT_PRICE"
 )
 
-type TransferType string
+// MarginType -- ISOLATED or CROSSED.
+type MarginType string
 
 const (
-	TransferTypeFutureToSpot TransferType = "FUTURE_SPOT"
-	TransferTypeSpotToFuture TransferType = "SPOT_FUTURE"
+	MarginTypeIsolated MarginType = "ISOLATED"
+	MarginTypeCrossed  MarginType = "CROSSED"
 )
 
+// ResponseType controls how detailed POST /order response is.
+type ResponseType string
+
+const (
+	ResponseTypeAck    ResponseType = "ACK"
+	ResponseTypeResult ResponseType = "RESULT"
+)
+
+// PositionMarginType discriminates between adding (1) and removing (2) margin
+// on isolated positions in ModifyIsolatedPositionMargin.
+type PositionMarginType int
+
+const (
+	PositionMarginAdd    PositionMarginType = 1
+	PositionMarginReduce PositionMarginType = 2
+)
+
+// AutoCloseType filters force-orders by reason.
 type AutoCloseType string
 
 const (
-	AutoCloseTypeLiquidation AutoCloseType = "LIQUIDATION"
-	AutoCloseTypeADL         AutoCloseType = "ADL"
+	AutoCloseLiquidation AutoCloseType = "LIQUIDATION"
+	AutoCloseADL         AutoCloseType = "ADL"
 )
 
-type DepthLevel struct {
-	Price    decimal.Decimal
-	Quantity decimal.Decimal
-}
+// IncomeType filters /fapi/v3/income.
+type IncomeType string
 
-type GeneralResponse struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
-}
+const (
+	IncomeTransfer                IncomeType = "TRANSFER"
+	IncomeWelcomeBonus            IncomeType = "WELCOME_BONUS"
+	IncomeRealizedPNL             IncomeType = "REALIZED_PNL"
+	IncomeFundingFee              IncomeType = "FUNDING_FEE"
+	IncomeCommission              IncomeType = "COMMISSION"
+	IncomeInsuranceClear          IncomeType = "INSURANCE_CLEAR"
+	IncomeMarketMerchantReturnRwd IncomeType = "MARKET_MERCHANT_RETURN_REWARD"
+)
 
-func handlerGeneralResponse(resp *GeneralResponse, err error) error {
-	if err != nil {
-		return err
-	}
-	if resp.Code != 200 {
-		return fmt.Errorf("%s failed: %d %v", resp.Message, resp.Code, resp.Message)
-	}
-	return nil
-}
+// TransferKindType controls direction of a futures<->spot transfer.
+type TransferKindType string
+
+const (
+	TransferFutureToSpot TransferKindType = "FUTURE_SPOT"
+	TransferSpotToFuture TransferKindType = "SPOT_FUTURE"
+)
+
+// KlineInterval values accepted by /fapi/v3/klines.
+type KlineInterval string
+
+const (
+	Interval1m  KlineInterval = "1m"
+	Interval3m  KlineInterval = "3m"
+	Interval5m  KlineInterval = "5m"
+	Interval15m KlineInterval = "15m"
+	Interval30m KlineInterval = "30m"
+	Interval1h  KlineInterval = "1h"
+	Interval2h  KlineInterval = "2h"
+	Interval4h  KlineInterval = "4h"
+	Interval6h  KlineInterval = "6h"
+	Interval8h  KlineInterval = "8h"
+	Interval12h KlineInterval = "12h"
+	Interval1d  KlineInterval = "1d"
+	Interval3d  KlineInterval = "3d"
+	Interval1w  KlineInterval = "1w"
+	Interval1M  KlineInterval = "1M"
+)

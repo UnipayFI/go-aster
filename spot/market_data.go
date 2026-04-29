@@ -2,306 +2,387 @@ package spot
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"strconv"
 	"time"
 
-	"github.com/UnipayFI/go-aster/request"
+	"github.com/UnipayFI/go-aster/v3/request"
 	"github.com/shopspring/decimal"
 )
 
-type DepthService struct {
+// GetExchangeInfoService -- GET /api/v3/exchangeInfo
+type GetExchangeInfoService struct {
 	c *SpotClient
+}
 
+func (c *SpotClient) NewGetExchangeInfoService() *GetExchangeInfoService {
+	return &GetExchangeInfoService{c: c}
+}
+
+func (s *GetExchangeInfoService) Do(ctx context.Context) (*ExchangeInfoResponse, error) {
+	req := request.Get(ctx, s.c, "/api/v3/exchangeInfo")
+	return request.Do[ExchangeInfoResponse](req)
+}
+
+type ExchangeInfoResponse struct {
+	Timezone        string      `json:"timezone"`
+	ServerTime      time.Time   `json:"serverTime,format:unixmilli"`
+	RateLimits      []RateLimit `json:"rateLimits"`
+	ExchangeFilters []any       `json:"exchangeFilters"`
+	Assets          []AssetInfo `json:"assets"`
+	Symbols         []Symbol    `json:"symbols"`
+}
+
+type RateLimit struct {
+	RateLimitType string `json:"rateLimitType"`
+	Interval      string `json:"interval"`
+	IntervalNum   int64  `json:"intervalNum"`
+	Limit         int64  `json:"limit"`
+}
+
+type AssetInfo struct {
+	Asset string `json:"asset"`
+}
+
+type Symbol struct {
+	Symbol             string           `json:"symbol"`
+	Status             string           `json:"status"`
+	BaseAsset          string           `json:"baseAsset"`
+	QuoteAsset         string           `json:"quoteAsset"`
+	PricePrecision     int              `json:"pricePrecision"`
+	QuantityPrecision  int              `json:"quantityPrecision"`
+	BaseAssetPrecision int              `json:"baseAssetPrecision"`
+	QuotePrecision     int              `json:"quotePrecision"`
+	Filters            []map[string]any `json:"filters"`
+	OrderTypes         []OrderType      `json:"orderTypes"`
+	TimeInForce        []TimeInForce    `json:"timeInForce"`
+	OcoAllowed         bool             `json:"ocoAllowed"`
+}
+
+// GetDepthService -- GET /api/v3/depth
+type GetDepthService struct {
+	c      *SpotClient
 	params map[string]string
 }
 
-func (c *SpotClient) NewDepthService(symbol string) *DepthService {
-	return &DepthService{c: c, params: map[string]string{"symbol": symbol}}
+func (c *SpotClient) NewGetDepthService(symbol string) *GetDepthService {
+	return &GetDepthService{c: c, params: map[string]string{"symbol": symbol}}
 }
 
-func (s *DepthService) SetLimit(limit int) *DepthService {
+func (s *GetDepthService) SetLimit(limit int) *GetDepthService {
 	s.params["limit"] = strconv.Itoa(limit)
 	return s
 }
 
-func (s *DepthService) Do(ctx context.Context) (*DepthResponse, error) {
-	req := request.Get(ctx, s.c, "/api/v1/depth", s.params)
+func (s *GetDepthService) Do(ctx context.Context) (*DepthResponse, error) {
+	req := request.Get(ctx, s.c, "/api/v3/depth", s.params)
 	return request.Do[DepthResponse](req)
 }
 
+// DepthResponse -- price levels are [price, qty] string pairs to preserve full
+// precision; convert with shopspring/decimal at the call site if needed.
 type DepthResponse struct {
 	LastUpdateId    int64       `json:"lastUpdateId"`
-	EventTime       time.Time   `json:"E,format:unixmilli"`
+	MessageTime     time.Time   `json:"E,format:unixmilli"`
 	TransactionTime time.Time   `json:"T,format:unixmilli"`
-	Bids            []PriceSize `json:"bids"`
-	Asks            []PriceSize `json:"asks"`
+	Bids            [][2]string `json:"bids"`
+	Asks            [][2]string `json:"asks"`
 }
 
-type PriceSize [2]decimal.Decimal
-
-func (p *PriceSize) Price() decimal.Decimal {
-	return p[0]
-}
-
-func (p *PriceSize) Size() decimal.Decimal {
-	return p[1]
-}
-
-type GetTradesService struct {
-	c *SpotClient
-
+// GetRecentTradesService -- GET /api/v3/trades
+type GetRecentTradesService struct {
+	c      *SpotClient
 	params map[string]string
 }
 
-func (c *SpotClient) NewGetTradesService(symbol string) *GetTradesService {
-	return &GetTradesService{c: c, params: map[string]string{"symbol": symbol}}
+func (c *SpotClient) NewGetRecentTradesService(symbol string) *GetRecentTradesService {
+	return &GetRecentTradesService{c: c, params: map[string]string{"symbol": symbol}}
 }
 
-func (s *GetTradesService) SetLimit(limit int) *GetTradesService {
+func (s *GetRecentTradesService) SetLimit(limit int) *GetRecentTradesService {
 	s.params["limit"] = strconv.Itoa(limit)
 	return s
 }
 
-func (s *GetTradesService) Do(ctx context.Context) ([]TradeResponse, error) {
-	req := request.Get(ctx, s.c, "/api/v1/trades", s.params)
-	trades, err := request.Do[[]TradeResponse](req)
+func (s *GetRecentTradesService) Do(ctx context.Context) ([]Trade, error) {
+	req := request.Get(ctx, s.c, "/api/v3/trades", s.params)
+	resp, err := request.Do[[]Trade](req)
 	if err != nil {
 		return nil, err
 	}
-	return *trades, nil
+	return *resp, nil
 }
 
-type TradeResponse struct {
-	Id           int64           `json:"id"`
+type Trade struct {
+	ID           int64           `json:"id"`
 	Price        decimal.Decimal `json:"price"`
-	Quantity     decimal.Decimal `json:"qty"`
-	BaseQuantity decimal.Decimal `json:"baseQty"`
+	Qty          decimal.Decimal `json:"qty"`
+	BaseQty      decimal.Decimal `json:"baseQty"`
 	Time         time.Time       `json:"time,format:unixmilli"`
 	IsBuyerMaker bool            `json:"isBuyerMaker"`
 }
 
-type HistoricalTradesService struct {
-	c *SpotClient
-
+// GetHistoricalTradesService -- GET /api/v3/historicalTrades (MARKET_DATA)
+type GetHistoricalTradesService struct {
+	c      *SpotClient
 	params map[string]string
 }
 
-func (c *SpotClient) NewHistoricalTradesService(symbol string) *HistoricalTradesService {
-	return &HistoricalTradesService{c: c, params: map[string]string{"symbol": symbol}}
+func (c *SpotClient) NewGetHistoricalTradesService(symbol string) *GetHistoricalTradesService {
+	return &GetHistoricalTradesService{c: c, params: map[string]string{"symbol": symbol}}
 }
 
-func (s *HistoricalTradesService) SetLimit(limit int) *HistoricalTradesService {
+func (s *GetHistoricalTradesService) SetLimit(limit int) *GetHistoricalTradesService {
 	s.params["limit"] = strconv.Itoa(limit)
 	return s
 }
 
-func (s *HistoricalTradesService) SetFromId(fromId int64) *HistoricalTradesService {
+func (s *GetHistoricalTradesService) SetFromId(fromId int64) *GetHistoricalTradesService {
 	s.params["fromId"] = strconv.FormatInt(fromId, 10)
 	return s
 }
 
-func (s *HistoricalTradesService) Do(ctx context.Context) ([]TradeResponse, error) {
-	req := request.Get(ctx, s.c, "/api/v1/historicalTrades", s.params).WithApiKey()
-	trades, err := request.Do[[]TradeResponse](req)
+func (s *GetHistoricalTradesService) Do(ctx context.Context) ([]Trade, error) {
+	req := request.Get(ctx, s.c, "/api/v3/historicalTrades", s.params)
+	resp, err := request.Do[[]Trade](req)
 	if err != nil {
 		return nil, err
 	}
-	return *trades, nil
+	return *resp, nil
 }
 
-type AggTradesService struct {
-	c *SpotClient
-
+// GetAggTradesService -- GET /api/v3/aggTrades
+type GetAggTradesService struct {
+	c      *SpotClient
 	params map[string]string
 }
 
-func (c *SpotClient) NewAggTradesService(symbol string) *AggTradesService {
-	return &AggTradesService{c: c, params: map[string]string{"symbol": symbol}}
+func (c *SpotClient) NewGetAggTradesService(symbol string) *GetAggTradesService {
+	return &GetAggTradesService{c: c, params: map[string]string{"symbol": symbol}}
 }
 
-func (s *AggTradesService) SetFromId(fromId int64) *AggTradesService {
+func (s *GetAggTradesService) SetFromId(fromId int64) *GetAggTradesService {
 	s.params["fromId"] = strconv.FormatInt(fromId, 10)
 	return s
 }
 
-func (s *AggTradesService) SetStartTime(startTime time.Time) *AggTradesService {
-	s.params["startTime"] = strconv.FormatInt(startTime.UnixMilli(), 10)
+func (s *GetAggTradesService) SetStartTime(t time.Time) *GetAggTradesService {
+	s.params["startTime"] = strconv.FormatInt(t.UnixMilli(), 10)
 	return s
 }
 
-func (s *AggTradesService) SetEndTime(endTime time.Time) *AggTradesService {
-	s.params["endTime"] = strconv.FormatInt(endTime.UnixMilli(), 10)
+func (s *GetAggTradesService) SetEndTime(t time.Time) *GetAggTradesService {
+	s.params["endTime"] = strconv.FormatInt(t.UnixMilli(), 10)
 	return s
 }
 
-func (s *AggTradesService) SetLimit(limit int) *AggTradesService {
+func (s *GetAggTradesService) SetLimit(limit int) *GetAggTradesService {
 	s.params["limit"] = strconv.Itoa(limit)
 	return s
 }
 
-func (s *AggTradesService) Do(ctx context.Context) ([]AggTradeResponse, error) {
-	req := request.Get(ctx, s.c, "/api/v1/aggTrades", s.params)
-	trades, err := request.Do[[]AggTradeResponse](req)
+func (s *GetAggTradesService) Do(ctx context.Context) ([]AggTrade, error) {
+	req := request.Get(ctx, s.c, "/api/v3/aggTrades", s.params)
+	resp, err := request.Do[[]AggTrade](req)
 	if err != nil {
 		return nil, err
 	}
-	return *trades, nil
+	return *resp, nil
 }
 
-type AggTradeResponse struct {
-	AggTradeId   int64           `json:"a"`
+type AggTrade struct {
+	AggTradeID   int64           `json:"a"`
 	Price        decimal.Decimal `json:"p"`
-	Quantity     decimal.Decimal `json:"q"`
-	FirstTradeId int64           `json:"f"`
-	LastTradeId  int64           `json:"l"`
+	Qty          decimal.Decimal `json:"q"`
+	FirstTradeID int64           `json:"f"`
+	LastTradeID  int64           `json:"l"`
 	Timestamp    time.Time       `json:"T,format:unixmilli"`
 	IsBuyerMaker bool            `json:"m"`
 }
 
-type KlinesService struct {
-	c *SpotClient
-
+// GetKlinesService -- GET /api/v3/klines
+type GetKlinesService struct {
+	c      *SpotClient
 	params map[string]string
 }
 
-func (c *SpotClient) NewKlinesService(symbol string, interval KlineInterval) *KlinesService {
-	return &KlinesService{c: c, params: map[string]string{"symbol": symbol, "interval": string(interval)}}
+func (c *SpotClient) NewGetKlinesService(symbol string, interval KlineInterval) *GetKlinesService {
+	return &GetKlinesService{c: c, params: map[string]string{
+		"symbol":   symbol,
+		"interval": string(interval),
+	}}
 }
 
-func (s *KlinesService) SetStartTime(startTime time.Time) *KlinesService {
-	s.params["startTime"] = strconv.FormatInt(startTime.UnixMilli(), 10)
+func (s *GetKlinesService) SetStartTime(t time.Time) *GetKlinesService {
+	s.params["startTime"] = strconv.FormatInt(t.UnixMilli(), 10)
 	return s
 }
 
-func (s *KlinesService) SetEndTime(endTime time.Time) *KlinesService {
-	s.params["endTime"] = strconv.FormatInt(endTime.UnixMilli(), 10)
+func (s *GetKlinesService) SetEndTime(t time.Time) *GetKlinesService {
+	s.params["endTime"] = strconv.FormatInt(t.UnixMilli(), 10)
 	return s
 }
 
-func (s *KlinesService) SetLimit(limit int) *KlinesService {
+func (s *GetKlinesService) SetLimit(limit int) *GetKlinesService {
 	s.params["limit"] = strconv.Itoa(limit)
 	return s
 }
 
-func (s *KlinesService) Do(ctx context.Context) ([]Kline, error) {
-	req := request.Get(ctx, s.c, "/api/v1/klines", s.params)
-	klines, err := request.Do[[]Kline](req)
+// Kline format: API returns a fixed-shape array per candle. We keep the raw
+// `[]any` form and provide a typed view via parseKline; this avoids losing
+// precision on the decimal fields when go's json experiments coerce numbers.
+func (s *GetKlinesService) Do(ctx context.Context) ([]Kline, error) {
+	req := request.Get(ctx, s.c, "/api/v3/klines", s.params)
+	raw, err := request.Do[[][]any](req)
 	if err != nil {
 		return nil, err
 	}
-	return *klines, nil
+	out := make([]Kline, 0, len(*raw))
+	for _, row := range *raw {
+		k, err := parseKline(row)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, k)
+	}
+	return out, nil
 }
 
 type Kline struct {
-	OpenTime                 time.Time       `json:"openTime,format:unixmilli"`
-	Open                     decimal.Decimal `json:"open"`
-	High                     decimal.Decimal `json:"high"`
-	Low                      decimal.Decimal `json:"low"`
-	Close                    decimal.Decimal `json:"close"`
-	Volume                   decimal.Decimal `json:"volume"`
-	CloseTime                time.Time       `json:"closeTime,format:unixmilli"`
-	QuoteAssetVolume         decimal.Decimal `json:"quoteAssetVolume"`
-	TradeNum                 int64           `json:"tradeNum"`
-	TakerBuyBaseAssetVolume  decimal.Decimal `json:"takerBuyBaseAssetVolume"`
-	TakerBuyQuoteAssetVolume decimal.Decimal `json:"takerBuyQuoteAssetVolume"`
+	OpenTime                 time.Time
+	Open                     decimal.Decimal
+	High                     decimal.Decimal
+	Low                      decimal.Decimal
+	Close                    decimal.Decimal
+	Volume                   decimal.Decimal
+	CloseTime                time.Time
+	QuoteAssetVolume         decimal.Decimal
+	NumberOfTrades           int64
+	TakerBuyBaseAssetVolume  decimal.Decimal
+	TakerBuyQuoteAssetVolume decimal.Decimal
 }
 
-func (k *Kline) UnmarshalJSON(data []byte) error {
-	var arr []json.RawMessage
-	if err := json.Unmarshal(data, &arr); err != nil {
-		return fmt.Errorf("failed to unmarshal as array: %w", err)
+func parseKline(row []any) (Kline, error) {
+	asDecimal := func(v any) (decimal.Decimal, error) {
+		s, ok := v.(string)
+		if !ok {
+			return decimal.Zero, errInvalidKlineRow
+		}
+		return decimal.NewFromString(s)
 	}
-	if len(arr) < 11 {
-		return fmt.Errorf("expected array length >= 11, got %d", len(arr))
+	asInt := func(v any) (int64, error) {
+		switch x := v.(type) {
+		case float64:
+			return int64(x), nil
+		case int64:
+			return x, nil
+		case int:
+			return int64(x), nil
+		}
+		return 0, errInvalidKlineRow
 	}
-	// 1. OpenTime
-	var opentime int64
-	if err := json.Unmarshal(arr[0], &opentime); err == nil {
-		k.OpenTime = time.Unix(opentime/1000, (opentime%1000)*int64(time.Millisecond))
-	} else {
-		return fmt.Errorf("failed to unmarshal open time: %w", err)
+	if len(row) < 11 {
+		return Kline{}, errInvalidKlineRow
 	}
-
-	// 2. Open
-	if err := json.Unmarshal(arr[1], &k.Open); err != nil {
-		return fmt.Errorf("failed to unmarshal open: %w", err)
+	openMs, err := asInt(row[0])
+	if err != nil {
+		return Kline{}, err
 	}
-
-	// 3. High
-	if err := json.Unmarshal(arr[2], &k.High); err != nil {
-		return fmt.Errorf("failed to unmarshal high: %w", err)
+	closeMs, err := asInt(row[6])
+	if err != nil {
+		return Kline{}, err
 	}
-
-	// 4. Low
-	if err := json.Unmarshal(arr[3], &k.Low); err != nil {
-		return fmt.Errorf("failed to unmarshal low: %w", err)
+	open, err := asDecimal(row[1])
+	if err != nil {
+		return Kline{}, err
 	}
-
-	// 5. Close
-	if err := json.Unmarshal(arr[4], &k.Close); err != nil {
-		return fmt.Errorf("failed to unmarshal close: %w", err)
+	high, err := asDecimal(row[2])
+	if err != nil {
+		return Kline{}, err
 	}
-
-	// 6. Volume
-	if err := json.Unmarshal(arr[5], &k.Volume); err != nil {
-		return fmt.Errorf("failed to unmarshal volume: %w", err)
+	low, err := asDecimal(row[3])
+	if err != nil {
+		return Kline{}, err
 	}
-
-	// 7. CloseTime (Unix毫秒时间戳)
-	var closeTime int64
-	if err := json.Unmarshal(arr[6], &closeTime); err == nil {
-		k.CloseTime = time.Unix(closeTime/1000, (closeTime%1000)*int64(time.Millisecond))
-	} else {
-		return fmt.Errorf("failed to unmarshal close time: %w", err)
+	cl, err := asDecimal(row[4])
+	if err != nil {
+		return Kline{}, err
 	}
-
-	// 8. QuoteAssetVolume
-	if err := json.Unmarshal(arr[7], &k.QuoteAssetVolume); err != nil {
-		return fmt.Errorf("failed to unmarshal quote asset volume: %w", err)
+	vol, err := asDecimal(row[5])
+	if err != nil {
+		return Kline{}, err
 	}
-
-	// 9. TradeNum
-	if err := json.Unmarshal(arr[8], &k.TradeNum); err != nil {
-		return fmt.Errorf("failed to unmarshal trade num: %w", err)
+	quoteVol, err := asDecimal(row[7])
+	if err != nil {
+		return Kline{}, err
 	}
-
-	// 10. TakerBuyBaseAssetVolume
-	if err := json.Unmarshal(arr[9], &k.TakerBuyBaseAssetVolume); err != nil {
-		return fmt.Errorf("failed to unmarshal taker buy base asset volume: %w", err)
+	numTrades, err := asInt(row[8])
+	if err != nil {
+		return Kline{}, err
 	}
-
-	// 11. TakerBuyQuoteAssetVolume
-	if err := json.Unmarshal(arr[10], &k.TakerBuyQuoteAssetVolume); err != nil {
-		return fmt.Errorf("failed to unmarshal taker buy quote asset volume: %w", err)
+	takerBase, err := asDecimal(row[9])
+	if err != nil {
+		return Kline{}, err
 	}
-	return nil
+	takerQuote, err := asDecimal(row[10])
+	if err != nil {
+		return Kline{}, err
+	}
+	return Kline{
+		OpenTime:                 time.UnixMilli(openMs),
+		Open:                     open,
+		High:                     high,
+		Low:                      low,
+		Close:                    cl,
+		Volume:                   vol,
+		CloseTime:                time.UnixMilli(closeMs),
+		QuoteAssetVolume:         quoteVol,
+		NumberOfTrades:           numTrades,
+		TakerBuyBaseAssetVolume:  takerBase,
+		TakerBuyQuoteAssetVolume: takerQuote,
+	}, nil
 }
 
-type Ticker24hrService struct {
-	c *SpotClient
+var errInvalidKlineRow = errInvalidRow("invalid kline row")
+
+type errInvalidRow string
+
+func (e errInvalidRow) Error() string { return string(e) }
+
+// Get24hTickerService -- GET /api/v3/ticker/24hr
+//
+// When symbol is empty the API returns an array; when set it returns a single
+// object. To keep the API uniform, the typed accessor returns []Ticker24h.
+type Get24hTickerService struct {
+	c      *SpotClient
+	params map[string]string
 }
 
-func (c *SpotClient) NewTicker24hrService() *Ticker24hrService {
-	return &Ticker24hrService{c: c}
+func (c *SpotClient) NewGet24hTickerService() *Get24hTickerService {
+	return &Get24hTickerService{c: c, params: map[string]string{}}
 }
 
-func (s *Ticker24hrService) Do(ctx context.Context, symbol string) (*Ticker24hrResponse, error) {
-	req := request.Get(ctx, s.c, "/api/v1/ticker/24hr", map[string]string{"symbol": symbol})
-	return request.Do[Ticker24hrResponse](req)
+func (s *Get24hTickerService) SetSymbol(symbol string) *Get24hTickerService {
+	s.params["symbol"] = symbol
+	return s
 }
 
-func (s *Ticker24hrService) DoAll(ctx context.Context) ([]Ticker24hrResponse, error) {
-	req := request.Get(ctx, s.c, "/api/v1/ticker/24hr")
-	tickers, err := request.Do[[]Ticker24hrResponse](req)
+func (s *Get24hTickerService) Do(ctx context.Context) ([]Ticker24h, error) {
+	req := request.Get(ctx, s.c, "/api/v3/ticker/24hr", s.params)
+	if _, ok := s.params["symbol"]; ok {
+		single, err := request.Do[Ticker24h](req)
+		if err != nil {
+			return nil, err
+		}
+		return []Ticker24h{*single}, nil
+	}
+	multi, err := request.Do[[]Ticker24h](req)
 	if err != nil {
 		return nil, err
 	}
-	return *tickers, nil
+	return *multi, nil
 }
 
-type Ticker24hrResponse struct {
+type Ticker24h struct {
 	Symbol             string          `json:"symbol"`
 	PriceChange        decimal.Decimal `json:"priceChange"`
 	PriceChangePercent decimal.Decimal `json:"priceChangePercent"`
@@ -327,57 +408,75 @@ type Ticker24hrResponse struct {
 	QuoteAsset         string          `json:"quoteAsset"`
 }
 
-type TickerPriceService struct {
-	c *SpotClient
+// GetTickerPriceService -- GET /api/v3/ticker/price
+type GetTickerPriceService struct {
+	c      *SpotClient
+	params map[string]string
 }
 
-func (c *SpotClient) NewTickerPriceService() *TickerPriceService {
-	return &TickerPriceService{c: c}
+func (c *SpotClient) NewGetTickerPriceService() *GetTickerPriceService {
+	return &GetTickerPriceService{c: c, params: map[string]string{}}
 }
 
-func (s *TickerPriceService) Do(ctx context.Context, symbol string) (*TickerPriceResponse, error) {
-	req := request.Get(ctx, s.c, "/api/v1/ticker/price", map[string]string{"symbol": symbol})
-	return request.Do[TickerPriceResponse](req)
+func (s *GetTickerPriceService) SetSymbol(symbol string) *GetTickerPriceService {
+	s.params["symbol"] = symbol
+	return s
 }
 
-func (s *TickerPriceService) DoAll(ctx context.Context) ([]TickerPriceResponse, error) {
-	req := request.Get(ctx, s.c, "/api/v1/ticker/price")
-	tickers, err := request.Do[[]TickerPriceResponse](req)
+func (s *GetTickerPriceService) Do(ctx context.Context) ([]TickerPrice, error) {
+	req := request.Get(ctx, s.c, "/api/v3/ticker/price", s.params)
+	if _, ok := s.params["symbol"]; ok {
+		single, err := request.Do[TickerPrice](req)
+		if err != nil {
+			return nil, err
+		}
+		return []TickerPrice{*single}, nil
+	}
+	multi, err := request.Do[[]TickerPrice](req)
 	if err != nil {
 		return nil, err
 	}
-	return *tickers, nil
+	return *multi, nil
 }
 
-type TickerPriceResponse struct {
+type TickerPrice struct {
 	Symbol string          `json:"symbol"`
 	Price  decimal.Decimal `json:"price"`
 	Time   time.Time       `json:"time,format:unixmilli"`
 }
 
-type BookTickerService struct {
-	c *SpotClient
+// GetBookTickerService -- GET /api/v3/ticker/bookTicker
+type GetBookTickerService struct {
+	c      *SpotClient
+	params map[string]string
 }
 
-func (c *SpotClient) NewBookTickerService() *BookTickerService {
-	return &BookTickerService{c: c}
+func (c *SpotClient) NewGetBookTickerService() *GetBookTickerService {
+	return &GetBookTickerService{c: c, params: map[string]string{}}
 }
 
-func (s *BookTickerService) Do(ctx context.Context, symbol string) (*BookTickerResponse, error) {
-	req := request.Get(ctx, s.c, "/api/v1/ticker/bookTicker", map[string]string{"symbol": symbol})
-	return request.Do[BookTickerResponse](req)
+func (s *GetBookTickerService) SetSymbol(symbol string) *GetBookTickerService {
+	s.params["symbol"] = symbol
+	return s
 }
 
-func (s *BookTickerService) DoAll(ctx context.Context) ([]BookTickerResponse, error) {
-	req := request.Get(ctx, s.c, "/api/v1/ticker/bookTicker")
-	tickers, err := request.Do[[]BookTickerResponse](req)
+func (s *GetBookTickerService) Do(ctx context.Context) ([]BookTicker, error) {
+	req := request.Get(ctx, s.c, "/api/v3/ticker/bookTicker", s.params)
+	if _, ok := s.params["symbol"]; ok {
+		single, err := request.Do[BookTicker](req)
+		if err != nil {
+			return nil, err
+		}
+		return []BookTicker{*single}, nil
+	}
+	multi, err := request.Do[[]BookTicker](req)
 	if err != nil {
 		return nil, err
 	}
-	return *tickers, nil
+	return *multi, nil
 }
 
-type BookTickerResponse struct {
+type BookTicker struct {
 	Symbol   string          `json:"symbol"`
 	BidPrice decimal.Decimal `json:"bidPrice"`
 	BidQty   decimal.Decimal `json:"bidQty"`
@@ -386,18 +485,18 @@ type BookTickerResponse struct {
 	Time     time.Time       `json:"time,format:unixmilli"`
 }
 
-type CommissionRateService struct {
-	c *SpotClient
-
+// GetCommissionRateService -- GET /api/v3/commissionRate (USER_DATA)
+type GetCommissionRateService struct {
+	c      *SpotClient
 	params map[string]string
 }
 
-func (c *SpotClient) NewCommissionRateService(symbol string) *CommissionRateService {
-	return &CommissionRateService{c: c, params: map[string]string{"symbol": symbol}}
+func (c *SpotClient) NewGetCommissionRateService(symbol string) *GetCommissionRateService {
+	return &GetCommissionRateService{c: c, params: map[string]string{"symbol": symbol}}
 }
 
-func (s *CommissionRateService) Do(ctx context.Context) (*CommissionRateResponse, error) {
-	req := request.Get(ctx, s.c, "/api/v1/commissionRate", s.params).WithSignature()
+func (s *GetCommissionRateService) Do(ctx context.Context) (*CommissionRateResponse, error) {
+	req := request.Get(ctx, s.c, "/api/v3/commissionRate", s.params).WithSignature()
 	return request.Do[CommissionRateResponse](req)
 }
 

@@ -1,7 +1,8 @@
 package client
 
 import (
-	"github.com/UnipayFI/go-aster/pkg/log"
+	asterCommon "github.com/UnipayFI/go-aster/v3/common"
+	"github.com/UnipayFI/go-aster/v3/pkg/log"
 	"github.com/go-json-experiment/json"
 	"github.com/go-resty/resty/v2"
 )
@@ -11,19 +12,21 @@ const (
 )
 
 type Option struct {
-	apiKey       string
-	secretKey    string
-	recvWindow   int64
-	logger       log.Logger
-	signFn       SignFn
-	client       *resty.Client
-	timeOffsetMs int64
+	userAddress         string
+	signerPrivateKeyHex string
+	chainID             int64
+	recvWindow          int64
+	logger              log.Logger
+	signFn              SignFn
+	client              *resty.Client
+	timeOffsetMs        int64
 }
 
 type Options func(*Option)
 
 func defaultOption() *Option {
 	return &Option{
+		chainID:    asterCommon.DEFAULT_EIP712_CHAIN_ID,
 		recvWindow: DEFAULT_RECV_WINDOW,
 		logger:     log.GetDefaultLogger(),
 		client:     defaultHttpClient(),
@@ -52,17 +55,36 @@ func WithLogger(logger log.Logger) Options {
 	}
 }
 
-func WithAuth(apiKey, secretKey string) Options {
+// WithAuth configures the credentials used for V3 signed requests.
+// userAddress is the main wallet address (may be empty when not required by
+// the endpoint). signerPrivateKeyHex is the API wallet private key in hex
+// (with or without the "0x" prefix); the signer address is derived from it.
+func WithAuth(userAddress, signerPrivateKeyHex string) Options {
 	return func(opt *Option) {
-		opt.apiKey = apiKey
-		opt.secretKey = secretKey
+		opt.userAddress = userAddress
+		opt.signerPrivateKeyHex = signerPrivateKeyHex
 	}
 }
 
-// WithSignFn sets the sign function for the client.
+// WithChainID overrides the EIP-712 domain chainId. Defaults to mainnet (1666).
+// Use 714 for testnet.
+func WithChainID(chainID int64) Options {
+	return func(opt *Option) {
+		opt.chainID = chainID
+	}
+}
+
+// WithSignRequestFn replaces the default EIP-712 + ECDSA signer with a custom
+// implementation (e.g. for HSM, TEE, or a remote signing service).
 func WithSignRequestFn(signFn SignFn) Options {
 	return func(opt *Option) {
 		opt.signFn = signFn
+	}
+}
+
+func WithRecvWindow(recvWindow int64) Options {
+	return func(opt *Option) {
+		opt.recvWindow = recvWindow
 	}
 }
 

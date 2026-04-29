@@ -6,359 +6,365 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/UnipayFI/go-aster/request"
+	"github.com/UnipayFI/go-aster/v3/request"
 	"github.com/shopspring/decimal"
 )
 
-type CreateOrderService struct {
+// Order is the response shape for new/modify/cancel/query order endpoints.
+// TRAILING_STOP_MARKET-only fields (ActivatePrice, PriceRate) are populated
+// only for that order type; other fields are common.
+type Order struct {
+	OrderId         int64           `json:"orderId"`
+	Symbol          string          `json:"symbol"`
+	Status          OrderStatus     `json:"status"`
+	ClientOrderId   string          `json:"clientOrderId"`
+	Price           decimal.Decimal `json:"price"`
+	AvgPrice        decimal.Decimal `json:"avgPrice"`
+	OrigQty         decimal.Decimal `json:"origQty"`
+	ExecutedQty     decimal.Decimal `json:"executedQty"`
+	CumQty          decimal.Decimal `json:"cumQty"`
+	CumQuote        decimal.Decimal `json:"cumQuote"`
+	TimeInForce     TimeInForce     `json:"timeInForce"`
+	Type            OrderType       `json:"type"`
+	OrigType        OrderType       `json:"origType"`
+	ReduceOnly      bool            `json:"reduceOnly"`
+	ClosePosition   bool            `json:"closePosition"`
+	Side            OrderSide       `json:"side"`
+	PositionSide    PositionSide    `json:"positionSide"`
+	StopPrice       decimal.Decimal `json:"stopPrice"`
+	WorkingType     WorkingType     `json:"workingType"`
+	PriceProtect    bool            `json:"priceProtect"`
+	ActivatePrice   decimal.Decimal `json:"activatePrice"`
+	PriceRate       decimal.Decimal `json:"priceRate"`
+	Time            time.Time       `json:"time,format:unixmilli"`
+	UpdateTime      time.Time       `json:"updateTime,format:unixmilli"`
+}
+
+// PlaceOrderService -- POST /fapi/v3/order (TRADE)
+type PlaceOrderService struct {
 	c      *FuturesClient
 	params map[string]string
 }
 
-func (c *FuturesClient) NewCreateOrderService(symbol string, side OrderSide, orderType OrderType) *CreateOrderService {
-	return &CreateOrderService{
-		c:      c,
-		params: map[string]string{"symbol": symbol, "side": string(side), "type": string(orderType)},
-	}
+func (c *FuturesClient) NewPlaceOrderService(symbol string, side OrderSide, orderType OrderType) *PlaceOrderService {
+	return &PlaceOrderService{c: c, params: map[string]string{
+		"symbol": symbol,
+		"side":   string(side),
+		"type":   string(orderType),
+	}}
 }
 
-func (s *CreateOrderService) SetPositionSide(positionSide PositionSide) *CreateOrderService {
-	s.params["positionSide"] = string(positionSide)
+func (s *PlaceOrderService) SetPositionSide(p PositionSide) *PlaceOrderService {
+	s.params["positionSide"] = string(p)
 	return s
 }
 
-func (s *CreateOrderService) SetTimeInForce(timeInForce TimeInForce) *CreateOrderService {
-	s.params["timeInForce"] = string(timeInForce)
+func (s *PlaceOrderService) SetTimeInForce(tif TimeInForce) *PlaceOrderService {
+	s.params["timeInForce"] = string(tif)
 	return s
 }
 
-func (s *CreateOrderService) SetQuantity(quantity float64) *CreateOrderService {
-	s.params["quantity"] = strconv.FormatFloat(quantity, 'f', -1, 64)
+func (s *PlaceOrderService) SetQuantity(q decimal.Decimal) *PlaceOrderService {
+	s.params["quantity"] = q.String()
 	return s
 }
 
-func (s *CreateOrderService) SetReduceOnly(reduceOnly bool) *CreateOrderService {
+func (s *PlaceOrderService) SetReduceOnly(reduceOnly bool) *PlaceOrderService {
 	s.params["reduceOnly"] = strconv.FormatBool(reduceOnly)
 	return s
 }
 
-func (s *CreateOrderService) SetPrice(price float64) *CreateOrderService {
-	s.params["price"] = strconv.FormatFloat(price, 'f', -1, 64)
+func (s *PlaceOrderService) SetPrice(p decimal.Decimal) *PlaceOrderService {
+	s.params["price"] = p.String()
 	return s
 }
 
-func (s *CreateOrderService) SetNewClientOrderId(newClientOrderId string) *CreateOrderService {
-	s.params["newClientOrderId"] = newClientOrderId
+func (s *PlaceOrderService) SetNewClientOrderId(id string) *PlaceOrderService {
+	s.params["newClientOrderId"] = id
 	return s
 }
 
-func (s *CreateOrderService) SetStopPrice(stopPrice float64) *CreateOrderService {
-	s.params["stopPrice"] = strconv.FormatFloat(stopPrice, 'f', -1, 64)
+func (s *PlaceOrderService) SetStopPrice(p decimal.Decimal) *PlaceOrderService {
+	s.params["stopPrice"] = p.String()
 	return s
 }
 
-func (s *CreateOrderService) SetClosePosition(closePosition bool) *CreateOrderService {
-	s.params["closePosition"] = strconv.FormatBool(closePosition)
+func (s *PlaceOrderService) SetClosePosition(close bool) *PlaceOrderService {
+	s.params["closePosition"] = strconv.FormatBool(close)
 	return s
 }
 
-func (s *CreateOrderService) SetActivationPrice(activationPrice float64) *CreateOrderService {
-	s.params["activationPrice"] = strconv.FormatFloat(activationPrice, 'f', -1, 64)
+func (s *PlaceOrderService) SetActivationPrice(p decimal.Decimal) *PlaceOrderService {
+	s.params["activationPrice"] = p.String()
 	return s
 }
 
-func (s *CreateOrderService) SetCallbackRate(callbackRate float64) *CreateOrderService {
-	s.params["callbackRate"] = strconv.FormatFloat(callbackRate, 'f', -1, 64)
+func (s *PlaceOrderService) SetCallbackRate(r decimal.Decimal) *PlaceOrderService {
+	s.params["callbackRate"] = r.String()
 	return s
 }
 
-func (s *CreateOrderService) SetWorkingType(workingType WorkingType) *CreateOrderService {
-	s.params["workingType"] = string(workingType)
+func (s *PlaceOrderService) SetWorkingType(w WorkingType) *PlaceOrderService {
+	s.params["workingType"] = string(w)
 	return s
 }
 
-func (s *CreateOrderService) SetPriceProtect(priceProtect bool) *CreateOrderService {
-	s.params["priceProtect"] = strconv.FormatBool(priceProtect)
+func (s *PlaceOrderService) SetPriceProtect(p bool) *PlaceOrderService {
+	if p {
+		s.params["priceProtect"] = "TRUE"
+	} else {
+		s.params["priceProtect"] = "FALSE"
+	}
 	return s
 }
 
-func (s *CreateOrderService) SetNewOrderRespType(newOrderRespType NewOrderRespType) *CreateOrderService {
-	s.params["newOrderRespType"] = string(newOrderRespType)
+func (s *PlaceOrderService) SetNewOrderRespType(r ResponseType) *PlaceOrderService {
+	s.params["newOrderRespType"] = string(r)
 	return s
 }
 
-func (s *CreateOrderService) Do(ctx context.Context) (*OrderResponse, error) {
-	req := request.Post(s.c, ctx, "/fapi/v1/order", s.params).WithSignature()
-	return request.Do[OrderResponse](req)
+func (s *PlaceOrderService) Do(ctx context.Context) (*Order, error) {
+	req := request.Post(s.c, ctx, "/fapi/v3/order", s.params).WithSignature()
+	return request.Do[Order](req)
 }
 
-type OrderResponse struct {
-	Symbol        string          `json:"symbol"`
-	OrderId       int64           `json:"orderId"`
-	ClientOrderId string          `json:"clientOrderId"`
-	Price         decimal.Decimal `json:"price"`
-	AvgPrice      decimal.Decimal `json:"avgPrice"`
-	OrigQty       decimal.Decimal `json:"origQty"`
-	ExecutedQty   decimal.Decimal `json:"executedQty"`
-	CumQty        decimal.Decimal `json:"cumQty"`
-	CumQuote      decimal.Decimal `json:"cumQuote"`
-	Status        OrderStatus     `json:"status"`
-	TimeInForce   TimeInForce     `json:"timeInForce"`
-	Type          OrderType       `json:"type"`
-	OrigType      OrderType       `json:"origType"`
-	ReduceOnly    bool            `json:"reduceOnly"`
-	ClosePosition bool            `json:"closePosition"`
-	Side          OrderSide       `json:"side"`
-	PositionSide  PositionSide    `json:"positionSide"`
-	StopPrice     decimal.Decimal `json:"stopPrice"`
-	WorkingType   WorkingType     `json:"workingType"`
-	PriceProtect  bool            `json:"priceProtect"`
-	ActivatePrice decimal.Decimal `json:"activatePrice"`
-	PriceRate     decimal.Decimal `json:"priceRate"`
-	Time          time.Time       `json:"time,format:unixmilli"`
-	UpdateTime    time.Time       `json:"updateTime,format:unixmilli"`
-}
-
-type CreateBatchOrdersService struct {
+// ModifyOrderService -- PUT /fapi/v3/order (TRADE)
+//
+// Only LIMIT orders can be modified, and only quantity / price. Either
+// orderId or origClientOrderId must be set; orderId wins if both.
+type ModifyOrderService struct {
 	c      *FuturesClient
-	orders []map[string]string
+	params map[string]string
 }
 
-func (c *FuturesClient) NewCreateBatchOrdersService() *CreateBatchOrdersService {
-	return &CreateBatchOrdersService{c: c, orders: []map[string]string{}}
+func (c *FuturesClient) NewModifyOrderService(symbol string) *ModifyOrderService {
+	return &ModifyOrderService{c: c, params: map[string]string{"symbol": symbol}}
 }
 
-func (s *CreateBatchOrdersService) AddOrder(order map[string]string) *CreateBatchOrdersService {
-	s.orders = append(s.orders, order)
+func (s *ModifyOrderService) SetOrderId(id int64) *ModifyOrderService {
+	s.params["orderId"] = strconv.FormatInt(id, 10)
 	return s
 }
 
-func (s *CreateBatchOrdersService) Do(ctx context.Context) ([]OrderResponse, error) {
-	data, _ := json.Marshal(s.orders)
-	params := map[string]string{"batchOrders": string(data)}
-	req := request.Post(s.c, ctx, "/fapi/v1/batchOrders", params).WithSignature()
-	resp, err := request.Do[[]OrderResponse](req)
+func (s *ModifyOrderService) SetOrigClientOrderId(id string) *ModifyOrderService {
+	s.params["origClientOrderId"] = id
+	return s
+}
+
+func (s *ModifyOrderService) SetQuantity(q decimal.Decimal) *ModifyOrderService {
+	s.params["quantity"] = q.String()
+	return s
+}
+
+func (s *ModifyOrderService) SetPrice(p decimal.Decimal) *ModifyOrderService {
+	s.params["price"] = p.String()
+	return s
+}
+
+func (s *ModifyOrderService) Do(ctx context.Context) (*Order, error) {
+	req := request.Put(ctx, s.c, "/fapi/v3/order", s.params).WithSignature()
+	return request.Do[Order](req)
+}
+
+// BatchOrderItem mirrors the per-order parameters accepted in batchOrders.
+// Empty string fields are omitted from the marshalled JSON.
+type BatchOrderItem struct {
+	Symbol           string `json:"symbol"`
+	Side             string `json:"side"`
+	PositionSide     string `json:"positionSide,omitempty"`
+	Type             string `json:"type"`
+	TimeInForce      string `json:"timeInForce,omitempty"`
+	Quantity         string `json:"quantity"`
+	ReduceOnly       string `json:"reduceOnly,omitempty"`
+	Price            string `json:"price,omitempty"`
+	NewClientOrderId string `json:"newClientOrderId,omitempty"`
+	StopPrice        string `json:"stopPrice,omitempty"`
+	ActivationPrice  string `json:"activationPrice,omitempty"`
+	CallbackRate     string `json:"callbackRate,omitempty"`
+	WorkingType      string `json:"workingType,omitempty"`
+	PriceProtect     string `json:"priceProtect,omitempty"`
+	NewOrderRespType string `json:"newOrderRespType,omitempty"`
+}
+
+// BatchOrdersService -- POST /fapi/v3/batchOrders (TRADE)
+//
+// Each list entry returns either an Order or {code,msg} error. Inspect the
+// raw responses with json.RawMessage if you need to handle partial failures.
+type BatchOrdersService struct {
+	c      *FuturesClient
+	orders []BatchOrderItem
+}
+
+func (c *FuturesClient) NewBatchOrdersService() *BatchOrdersService {
+	return &BatchOrdersService{c: c}
+}
+
+func (s *BatchOrdersService) SetOrders(orders []BatchOrderItem) *BatchOrdersService {
+	s.orders = orders
+	return s
+}
+
+func (s *BatchOrdersService) Do(ctx context.Context) ([]json.RawMessage, error) {
+	data, err := json.Marshal(s.orders)
+	if err != nil {
+		return nil, err
+	}
+	req := request.Post(s.c, ctx, "/fapi/v3/batchOrders", map[string]string{
+		"batchOrders": string(data),
+	}).WithSignature()
+	resp, err := request.Do[[]json.RawMessage](req)
 	if err != nil {
 		return nil, err
 	}
 	return *resp, nil
 }
 
-type CancelOrderService struct {
+// FuturesSpotTransferService -- POST /fapi/v3/asset/wallet/transfer (TRANSFER)
+type FuturesSpotTransferService struct {
 	c      *FuturesClient
 	params map[string]string
 }
 
-func (c *FuturesClient) NewCancelOrderService(symbol string) *CancelOrderService {
-	return &CancelOrderService{
-		c:      c,
-		params: map[string]string{"symbol": symbol},
-	}
+func (c *FuturesClient) NewFuturesSpotTransferService(asset string, amount decimal.Decimal, kind TransferKindType, clientTranID string) *FuturesSpotTransferService {
+	return &FuturesSpotTransferService{c: c, params: map[string]string{
+		"amount":       amount.String(),
+		"asset":        asset,
+		"clientTranId": clientTranID,
+		"kindType":     string(kind),
+	}}
 }
 
-func (s *CancelOrderService) SetOrderId(orderId int64) *CancelOrderService {
-	s.params["orderId"] = strconv.FormatInt(orderId, 10)
-	return s
+func (s *FuturesSpotTransferService) Do(ctx context.Context) (*TransferResponse, error) {
+	req := request.Post(s.c, ctx, "/fapi/v3/asset/wallet/transfer", s.params).WithSignature()
+	return request.Do[TransferResponse](req)
 }
 
-func (s *CancelOrderService) SetOrigClientOrderId(origClientOrderId string) *CancelOrderService {
-	s.params["origClientOrderId"] = origClientOrderId
-	return s
+type TransferResponse struct {
+	TranID int64  `json:"tranId"`
+	Status string `json:"status"`
 }
 
-func (s *CancelOrderService) Do(ctx context.Context) (*OrderResponse, error) {
-	req := request.Delete(ctx, s.c, "/fapi/v1/order", s.params).WithSignature()
-	return request.Do[OrderResponse](req)
-}
-
-type CancelAllOrdersService struct {
-	c      *FuturesClient
-	params map[string]string
-}
-
-func (c *FuturesClient) NewCancelAllOrdersService(symbol string) *CancelAllOrdersService {
-	return &CancelAllOrdersService{
-		c:      c,
-		params: map[string]string{"symbol": symbol},
-	}
-}
-
-func (s *CancelAllOrdersService) Do(ctx context.Context) error {
-	req := request.Delete(ctx, s.c, "/fapi/v1/allOpenOrders", s.params).WithSignature()
-	return handlerGeneralResponse(request.Do[GeneralResponse](req))
-}
-
-type CancelBatchOrdersService struct {
-	c      *FuturesClient
-	params map[string]string
-}
-
-func (c *FuturesClient) NewCancelBatchOrdersService(symbol string) *CancelBatchOrdersService {
-	return &CancelBatchOrdersService{
-		c:      c,
-		params: map[string]string{"symbol": symbol},
-	}
-}
-
-func (s *CancelBatchOrdersService) SetOrderIdList(orderIds []int64) *CancelBatchOrdersService {
-	data, _ := json.Marshal(orderIds)
-	s.params["orderIdList"] = string(data)
-	return s
-}
-
-func (s *CancelBatchOrdersService) SetOrigClientOrderIdList(origClientOrderIds []string) *CancelBatchOrdersService {
-	data, _ := json.Marshal(origClientOrderIds)
-	s.params["origClientOrderIdList"] = string(data)
-	return s
-}
-
-func (s *CancelBatchOrdersService) Do(ctx context.Context) ([]OrderResponse, error) {
-	req := request.Delete(ctx, s.c, "/fapi/v1/batchOrders", s.params).WithSignature()
-	resp, err := request.Do[[]OrderResponse](req)
-	if err != nil {
-		return nil, err
-	}
-	return *resp, nil
-}
-
+// GetOrderService -- GET /fapi/v3/order (USER_DATA)
 type GetOrderService struct {
 	c      *FuturesClient
 	params map[string]string
 }
 
 func (c *FuturesClient) NewGetOrderService(symbol string) *GetOrderService {
-	return &GetOrderService{
-		c:      c,
-		params: map[string]string{"symbol": symbol},
-	}
+	return &GetOrderService{c: c, params: map[string]string{"symbol": symbol}}
 }
 
-func (s *GetOrderService) SetOrderId(orderId int64) *GetOrderService {
-	s.params["orderId"] = strconv.FormatInt(orderId, 10)
+func (s *GetOrderService) SetOrderId(id int64) *GetOrderService {
+	s.params["orderId"] = strconv.FormatInt(id, 10)
 	return s
 }
 
-func (s *GetOrderService) SetOrigClientOrderId(origClientOrderId string) *GetOrderService {
-	s.params["origClientOrderId"] = origClientOrderId
+func (s *GetOrderService) SetOrigClientOrderId(id string) *GetOrderService {
+	s.params["origClientOrderId"] = id
 	return s
 }
 
-func (s *GetOrderService) Do(ctx context.Context) (*OrderResponse, error) {
-	req := request.Get(ctx, s.c, "/fapi/v1/order", s.params).WithSignature()
-	return request.Do[OrderResponse](req)
+func (s *GetOrderService) Do(ctx context.Context) (*Order, error) {
+	req := request.Get(ctx, s.c, "/fapi/v3/order", s.params).WithSignature()
+	return request.Do[Order](req)
 }
 
-type GetOpenOrderService struct {
+// CancelOrderService -- DELETE /fapi/v3/order (TRADE)
+type CancelOrderService struct {
 	c      *FuturesClient
 	params map[string]string
 }
 
-func (c *FuturesClient) NewGetOpenOrderService(symbol string) *GetOpenOrderService {
-	return &GetOpenOrderService{
-		c:      c,
-		params: map[string]string{"symbol": symbol},
-	}
+func (c *FuturesClient) NewCancelOrderService(symbol string) *CancelOrderService {
+	return &CancelOrderService{c: c, params: map[string]string{"symbol": symbol}}
 }
 
-func (s *GetOpenOrderService) SetOrderId(orderId int64) *GetOpenOrderService {
-	s.params["orderId"] = strconv.FormatInt(orderId, 10)
+func (s *CancelOrderService) SetOrderId(id int64) *CancelOrderService {
+	s.params["orderId"] = strconv.FormatInt(id, 10)
 	return s
 }
 
-func (s *GetOpenOrderService) SetOrigClientOrderId(origClientOrderId string) *GetOpenOrderService {
-	s.params["origClientOrderId"] = origClientOrderId
+func (s *CancelOrderService) SetOrigClientOrderId(id string) *CancelOrderService {
+	s.params["origClientOrderId"] = id
 	return s
 }
 
-func (s *GetOpenOrderService) Do(ctx context.Context) (*OrderResponse, error) {
-	req := request.Get(ctx, s.c, "/fapi/v1/openOrder", s.params).WithSignature()
-	return request.Do[OrderResponse](req)
+func (s *CancelOrderService) Do(ctx context.Context) (*Order, error) {
+	req := request.Delete(ctx, s.c, "/fapi/v3/order", s.params).WithSignature()
+	return request.Do[Order](req)
 }
 
-type GetOpenOrdersService struct {
+// CancelAllOpenOrdersService -- DELETE /fapi/v3/allOpenOrders (TRADE)
+type CancelAllOpenOrdersService struct {
+	c      *FuturesClient
+	symbol string
+}
+
+func (c *FuturesClient) NewCancelAllOpenOrdersService(symbol string) *CancelAllOpenOrdersService {
+	return &CancelAllOpenOrdersService{c: c, symbol: symbol}
+}
+
+func (s *CancelAllOpenOrdersService) Do(ctx context.Context) (*GenericCodeMsg, error) {
+	req := request.Delete(ctx, s.c, "/fapi/v3/allOpenOrders", map[string]string{"symbol": s.symbol}).WithSignature()
+	return request.Do[GenericCodeMsg](req)
+}
+
+type GenericCodeMsg struct {
+	Code int    `json:"code"`
+	Msg  string `json:"msg"`
+}
+
+// CancelMultipleOrdersService -- DELETE /fapi/v3/batchOrders (TRADE)
+type CancelMultipleOrdersService struct {
 	c      *FuturesClient
 	params map[string]string
 }
 
-func (c *FuturesClient) NewGetOpenOrdersService() *GetOpenOrdersService {
-	return &GetOpenOrdersService{
-		c:      c,
-		params: map[string]string{},
-	}
+func (c *FuturesClient) NewCancelMultipleOrdersService(symbol string) *CancelMultipleOrdersService {
+	return &CancelMultipleOrdersService{c: c, params: map[string]string{"symbol": symbol}}
 }
 
-func (s *GetOpenOrdersService) SetSymbol(symbol string) *GetOpenOrdersService {
-	s.params["symbol"] = symbol
+func (s *CancelMultipleOrdersService) SetOrderIdList(ids []int64) *CancelMultipleOrdersService {
+	data, _ := json.Marshal(ids)
+	s.params["orderIdList"] = string(data)
 	return s
 }
 
-func (s *GetOpenOrdersService) Do(ctx context.Context) ([]OrderResponse, error) {
-	req := request.Get(ctx, s.c, "/fapi/v1/openOrders", s.params).WithSignature()
-	orders, err := request.Do[[]OrderResponse](req)
+func (s *CancelMultipleOrdersService) SetOrigClientOrderIdList(ids []string) *CancelMultipleOrdersService {
+	data, _ := json.Marshal(ids)
+	s.params["origClientOrderIdList"] = string(data)
+	return s
+}
+
+func (s *CancelMultipleOrdersService) Do(ctx context.Context) ([]json.RawMessage, error) {
+	req := request.Delete(ctx, s.c, "/fapi/v3/batchOrders", s.params).WithSignature()
+	resp, err := request.Do[[]json.RawMessage](req)
 	if err != nil {
 		return nil, err
 	}
-	return *orders, nil
+	return *resp, nil
 }
 
-type GetAllOrdersService struct {
-	c      *FuturesClient
-	params map[string]string
-}
-
-func (c *FuturesClient) NewGetAllOrdersService(symbol string) *GetAllOrdersService {
-	return &GetAllOrdersService{
-		c:      c,
-		params: map[string]string{"symbol": symbol},
-	}
-}
-
-func (s *GetAllOrdersService) SetOrderId(orderId int64) *GetAllOrdersService {
-	s.params["orderId"] = strconv.FormatInt(orderId, 10)
-	return s
-}
-
-func (s *GetAllOrdersService) SetStartTime(startTime time.Time) *GetAllOrdersService {
-	s.params["startTime"] = strconv.FormatInt(startTime.UnixMilli(), 10)
-	return s
-}
-
-func (s *GetAllOrdersService) SetEndTime(endTime time.Time) *GetAllOrdersService {
-	s.params["endTime"] = strconv.FormatInt(endTime.UnixMilli(), 10)
-	return s
-}
-
-func (s *GetAllOrdersService) SetLimit(limit int) *GetAllOrdersService {
-	s.params["limit"] = strconv.Itoa(limit)
-	return s
-}
-
-func (s *GetAllOrdersService) Do(ctx context.Context) ([]OrderResponse, error) {
-	req := request.Get(ctx, s.c, "/fapi/v1/allOrders", s.params).WithSignature()
-	orders, err := request.Do[[]OrderResponse](req)
-	if err != nil {
-		return nil, err
-	}
-	return *orders, nil
-}
-
+// CountdownCancelAllService -- POST /fapi/v3/countdownCancelAll (TRADE)
+//
+// Heartbeat-style: call repeatedly to keep extending the countdown. A value
+// of 0 disables the timer. The system polls roughly every 10ms, so don't
+// rely on sub-second precision.
 type CountdownCancelAllService struct {
-	c      *FuturesClient
-	params map[string]string
+	c             *FuturesClient
+	symbol        string
+	countdownTime int64
 }
 
-func (c *FuturesClient) NewCountdownCancelAllService(symbol string, countdownTime int64) *CountdownCancelAllService {
-	return &CountdownCancelAllService{
-		c: c,
-		params: map[string]string{
-			"symbol":        symbol,
-			"countdownTime": strconv.FormatInt(countdownTime, 10),
-		},
-	}
+func (c *FuturesClient) NewCountdownCancelAllService(symbol string, countdownTimeMs int64) *CountdownCancelAllService {
+	return &CountdownCancelAllService{c: c, symbol: symbol, countdownTime: countdownTimeMs}
 }
 
 func (s *CountdownCancelAllService) Do(ctx context.Context) (*CountdownCancelAllResponse, error) {
-	req := request.Post(s.c, ctx, "/fapi/v1/countdownCancelAll", s.params).WithSignature()
+	req := request.Post(s.c, ctx, "/fapi/v3/countdownCancelAll", map[string]string{
+		"symbol":        s.symbol,
+		"countdownTime": strconv.FormatInt(s.countdownTime, 10),
+	}).WithSignature()
 	return request.Do[CountdownCancelAllResponse](req)
 }
 
@@ -367,29 +373,90 @@ type CountdownCancelAllResponse struct {
 	CountdownTime string `json:"countdownTime"`
 }
 
-type WalletTransferService struct {
+// GetOpenOrderService -- GET /fapi/v3/openOrder (USER_DATA)
+type GetOpenOrderService struct {
 	c      *FuturesClient
 	params map[string]string
 }
 
-func (c *FuturesClient) NewWalletTransferService(asset string, amount float64, clientTranId string, kindType TransferType) *WalletTransferService {
-	return &WalletTransferService{
-		c: c,
-		params: map[string]string{
-			"asset":        asset,
-			"amount":       strconv.FormatFloat(amount, 'f', -1, 64),
-			"clientTranId": clientTranId,
-			"kindType":     string(kindType),
-		},
+func (c *FuturesClient) NewGetOpenOrderService(symbol string) *GetOpenOrderService {
+	return &GetOpenOrderService{c: c, params: map[string]string{"symbol": symbol}}
+}
+
+func (s *GetOpenOrderService) SetOrderId(id int64) *GetOpenOrderService {
+	s.params["orderId"] = strconv.FormatInt(id, 10)
+	return s
+}
+
+func (s *GetOpenOrderService) SetOrigClientOrderId(id string) *GetOpenOrderService {
+	s.params["origClientOrderId"] = id
+	return s
+}
+
+func (s *GetOpenOrderService) Do(ctx context.Context) (*Order, error) {
+	req := request.Get(ctx, s.c, "/fapi/v3/openOrder", s.params).WithSignature()
+	return request.Do[Order](req)
+}
+
+// GetOpenOrdersService -- GET /fapi/v3/openOrders (USER_DATA)
+type GetOpenOrdersService struct {
+	c      *FuturesClient
+	params map[string]string
+}
+
+func (c *FuturesClient) NewGetOpenOrdersService() *GetOpenOrdersService {
+	return &GetOpenOrdersService{c: c, params: map[string]string{}}
+}
+
+func (s *GetOpenOrdersService) SetSymbol(symbol string) *GetOpenOrdersService {
+	s.params["symbol"] = symbol
+	return s
+}
+
+func (s *GetOpenOrdersService) Do(ctx context.Context) ([]Order, error) {
+	req := request.Get(ctx, s.c, "/fapi/v3/openOrders", s.params).WithSignature()
+	resp, err := request.Do[[]Order](req)
+	if err != nil {
+		return nil, err
 	}
+	return *resp, nil
 }
 
-func (s *WalletTransferService) Do(ctx context.Context) (*WalletTransferResponse, error) {
-	req := request.Post(s.c, ctx, "/fapi/v1/asset/wallet/transfer", s.params).WithSignature()
-	return request.Do[WalletTransferResponse](req)
+// GetAllOrdersService -- GET /fapi/v3/allOrders (USER_DATA)
+type GetAllOrdersService struct {
+	c      *FuturesClient
+	params map[string]string
 }
 
-type WalletTransferResponse struct {
-	TranId int64  `json:"tranId"`
-	Status string `json:"status"`
+func (c *FuturesClient) NewGetAllOrdersService(symbol string) *GetAllOrdersService {
+	return &GetAllOrdersService{c: c, params: map[string]string{"symbol": symbol}}
+}
+
+func (s *GetAllOrdersService) SetOrderId(id int64) *GetAllOrdersService {
+	s.params["orderId"] = strconv.FormatInt(id, 10)
+	return s
+}
+
+func (s *GetAllOrdersService) SetStartTime(t time.Time) *GetAllOrdersService {
+	s.params["startTime"] = strconv.FormatInt(t.UnixMilli(), 10)
+	return s
+}
+
+func (s *GetAllOrdersService) SetEndTime(t time.Time) *GetAllOrdersService {
+	s.params["endTime"] = strconv.FormatInt(t.UnixMilli(), 10)
+	return s
+}
+
+func (s *GetAllOrdersService) SetLimit(limit int) *GetAllOrdersService {
+	s.params["limit"] = strconv.Itoa(limit)
+	return s
+}
+
+func (s *GetAllOrdersService) Do(ctx context.Context) ([]Order, error) {
+	req := request.Get(ctx, s.c, "/fapi/v3/allOrders", s.params).WithSignature()
+	resp, err := request.Do[[]Order](req)
+	if err != nil {
+		return nil, err
+	}
+	return *resp, nil
 }
