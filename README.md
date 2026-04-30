@@ -17,6 +17,7 @@ Go SDK for the [Aster DEX](https://www.asterdex.com) **V3** API (Spot + Futures,
 - ✅ **WebSocket Streaming**: full Spot & Futures market streams plus user data streams
 - ✅ **Sub-account Flows**: bind / create / update / transfer with master + child signature inputs
 - ✅ **Flexible Signer**: pluggable `SignFn` for HSM, TEE, or remote signing
+- ✅ **TEE Injection**: `WithTEEAuth` lets the signer's private key stay inside the enclave — the SDK only holds the user/signer addresses and delegates signing via `WithSignRequestFn`
 - ✅ **Mainnet & Testnet**: chainId `1666` (default) / `714` switchable via options
 
 ---
@@ -86,6 +87,7 @@ aster.NewFuturesWebSocketClient(...)  // wss://fstream.asterdex.com
 
 ```go
 client.WithAuth(userAddress, signerPrivateKeyHex string)
+client.WithTEEAuth(userAddress, signerAddress string) // TEE/HSM mode: no local private key
 client.WithBaseURL(url string)          // override default endpoint
 client.WithChainID(int64)               // 1666 mainnet (default) / 714 testnet
 client.WithLogger(log.Logger)           // slog-compatible interface
@@ -145,6 +147,41 @@ wsClient.NewSubscribeUserDataStreamService(key.ListenKey).
         }
     })
 ```
+
+### TEE injection (private key never leaves the enclave)
+
+For deployments where the API-wallet private key must stay inside a trusted execution environment, use `WithTEEAuth` to register the user/signer addresses and delegate the actual signing to your TEE binary via `WithSignRequestFn`. The SDK never sees the private key.
+
+```go
+import (
+    "os/exec"
+    "strings"
+
+    aster "github.com/UnipayFI/go-aster/v3"
+    "github.com/UnipayFI/go-aster/v3/client"
+)
+
+c := aster.NewFuturesClient(
+    client.WithTEEAuth(
+        "0x...master wallet address...",
+        "0x...API wallet (signer) address...",
+    ),
+    client.WithSignRequestFn(func(_ /*privateKeyHex*/, msg string, _ /*chainID*/ int64) (string, error) {
+        // Shell out to the TEE binary. API_KEY is read from the env by the TEE
+        // process; the private key is sealed inside the enclave.
+        out, err := exec.Command("./tee",
+            "--encrypt-type=EIP712-ECDSA",
+            "--input="+msg,
+        ).Output()
+        if err != nil {
+            return "", err
+        }
+        return strings.TrimSpace(string(out)), nil
+    }),
+)
+```
+
+The companion TEE binary lives at [`UnipayFI/tee-encrypt`](https://github.com/UnipayFI/tee-encrypt). It reads the sealed signer key via the `API_KEY` env var, computes the EIP-712 digest internally (chainId `1666`, the protocol-fixed Aster domain) and returns a 130-char hex signature with `v ∈ {27, 28}` — byte-compatible with the SDK's local signer.
 
 ### Sub-account flows (master / child signatures)
 

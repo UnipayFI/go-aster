@@ -13,6 +13,7 @@ const (
 
 type Option struct {
 	userAddress         string
+	signerAddress       string
 	signerPrivateKeyHex string
 	chainID             int64
 	recvWindow          int64
@@ -63,6 +64,18 @@ func WithAuth(userAddress, signerPrivateKeyHex string) Options {
 	return func(opt *Option) {
 		opt.userAddress = userAddress
 		opt.signerPrivateKeyHex = signerPrivateKeyHex
+	}
+}
+
+// WithTEEAuth configures credentials for TEE / HSM / remote-signer mode where
+// the signer's private key never leaves the enclave. Pass the main wallet
+// address and the API-wallet (signer) address; no local private key is
+// required. Must be combined with WithSignRequestFn, which is what actually
+// performs the EIP-712 signing -- typically by shelling out to the TEE binary.
+func WithTEEAuth(userAddress, signerAddress string) Options {
+	return func(opt *Option) {
+		opt.userAddress = userAddress
+		opt.signerAddress = signerAddress
 	}
 }
 

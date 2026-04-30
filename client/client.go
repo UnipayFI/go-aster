@@ -60,6 +60,7 @@ func NewClient(options ...Options) *Client {
 	c := &Client{
 		client:        opt.client,
 		userAddress:   opt.userAddress,
+		signerAddress: opt.signerAddress,
 		chainID:       opt.chainID,
 		recvWindow:    opt.recvWindow,
 		logger:        opt.logger,
@@ -68,13 +69,18 @@ func NewClient(options ...Options) *Client {
 		privateKeyHex: opt.signerPrivateKeyHex,
 	}
 
+	// Local signing mode: derive signer address from the private key. Skipped
+	// when WithTEEAuth has already supplied an explicit signer address (the
+	// private key lives inside the TEE in that case).
 	if opt.signerPrivateKeyHex != "" {
 		priv, addr, err := parsePrivateKey(opt.signerPrivateKeyHex)
 		if err != nil {
 			c.authErr = err
 		} else {
 			c.signerPrivateKey = priv
-			c.signerAddress = addr
+			if c.signerAddress == "" {
+				c.signerAddress = addr
+			}
 		}
 	}
 
