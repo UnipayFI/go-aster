@@ -18,6 +18,7 @@ Go SDK for the [Aster DEX](https://www.asterdex.com) **V3** API (Spot + Futures,
 - ✅ **Sub-account Flows**: bind / create / update / transfer with master + child signature inputs
 - ✅ **Flexible Signer**: pluggable `SignFn` for HSM, TEE, or remote signing
 - ✅ **TEE Injection**: `WithTEEAuth` lets the signer's private key stay inside the enclave — the SDK only holds the user/signer addresses and delegates signing via `WithSignRequestFn`
+- ✅ **Proxy Support**: `WithProxy` / `WithWebSocketProxy` route REST and WebSocket traffic through HTTP, HTTPS, or SOCKS5 (`socks5` / `socks5h`) proxies, with optional `user:pass@` auth in the URL
 - ✅ **Mainnet & Testnet**: chainId `1666` (default) / `714` switchable via options
 
 ---

@@ -2,8 +2,6 @@ package request
 
 import (
 	"context"
-	"crypto/tls"
-	"net/http"
 	"time"
 
 	"github.com/UnipayFI/go-aster/v3/common"
@@ -15,6 +13,7 @@ import (
 type WebSocketClient interface {
 	GetHttpClient() *resty.Client
 	GetLogger() log.Logger
+	GetDialer() *websocket.Dialer
 }
 
 func Subscribe[T any](ctx context.Context, client WebSocketClient, endpoint string, callback func(message *T, err error)) (done chan<- struct{}, stop <-chan struct{}, err error) {
@@ -43,15 +42,7 @@ func SubscribeRaw(ctx context.Context, client WebSocketClient, endpoint string, 
 
 func subscribeBytes(ctx context.Context, client WebSocketClient, endpoint string, callback func(message []byte, err error)) (done chan<- struct{}, stop <-chan struct{}, err error) {
 	fullURL := client.GetHttpClient().BaseURL + endpoint
-	dialer := websocket.Dialer{
-		Proxy:             http.ProxyFromEnvironment,
-		HandshakeTimeout:  45 * time.Second,
-		EnableCompression: true,
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true,
-		},
-	}
-
+	dialer := client.GetDialer()
 	conn, _, err := dialer.DialContext(ctx, fullURL, nil)
 	if err != nil {
 		return nil, nil, err
