@@ -656,3 +656,28 @@ type IndexReference struct {
 	Symbol   string          `json:"symbol"`
 	Weight   decimal.Decimal `json:"weight"`
 }
+
+// GetOpenInterestService -- GET /fapi/v3/openInterest
+//
+// Returns the present open interest for a symbol, denominated in the base
+// asset (e.g. BTC for BTCUSDT). Multiply by markPrice to get notional in
+// the quote asset.
+type GetOpenInterestService struct {
+	c      *FuturesClient
+	params map[string]string
+}
+
+func (c *FuturesClient) NewGetOpenInterestService(symbol string) *GetOpenInterestService {
+	return &GetOpenInterestService{c: c, params: map[string]string{"symbol": symbol}}
+}
+
+func (s *GetOpenInterestService) Do(ctx context.Context) (*OpenInterest, error) {
+	req := request.Get(ctx, s.c, "/fapi/v3/openInterest", s.params)
+	return request.Do[OpenInterest](req)
+}
+
+type OpenInterest struct {
+	Symbol       string          `json:"symbol"`
+	OpenInterest decimal.Decimal `json:"openInterest"`
+	Time         time.Time       `json:"time,format:unixmilli"`
+}
