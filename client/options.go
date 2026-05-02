@@ -26,7 +26,7 @@ type Option struct {
 	userAddress         string
 	signerAddress       string
 	signerPrivateKeyHex string
-	chainID             int64
+	network             asterCommon.Network
 	recvWindow          int64
 	logger              log.Logger
 	signFn              SignFn
@@ -38,7 +38,7 @@ type Options func(*Option)
 
 func defaultOption() *Option {
 	return &Option{
-		chainID:    asterCommon.DEFAULT_EIP712_CHAIN_ID,
+		network:    asterCommon.Mainnet,
 		recvWindow: DEFAULT_RECV_WINDOW,
 		logger:     log.GetDefaultLogger(),
 		client:     defaultHttpClient(),
@@ -55,9 +55,11 @@ func defaultHttpClient() *resty.Client {
 		})
 }
 
-func WithBaseURL(baseURL string) Options {
+// WithNetwork selects the Aster network. The REST base URL and the EIP-712
+// chainId are both derived from this value. Defaults to common.Mainnet.
+func WithNetwork(network asterCommon.Network) Options {
 	return func(opt *Option) {
-		opt.client.SetBaseURL(baseURL)
+		opt.network = network
 	}
 }
 
@@ -87,14 +89,6 @@ func WithTEEAuth(userAddress, signerAddress string) Options {
 	return func(opt *Option) {
 		opt.userAddress = userAddress
 		opt.signerAddress = signerAddress
-	}
-}
-
-// WithChainID overrides the EIP-712 domain chainId. Defaults to mainnet (1666).
-// Use 714 for testnet.
-func WithChainID(chainID int64) Options {
-	return func(opt *Option) {
-		opt.chainID = chainID
 	}
 }
 
@@ -152,18 +146,20 @@ func WithProxy(proxyURL string) Options {
 }
 
 type WebSocketOption struct {
-	logger log.Logger
-	client *resty.Client
-	dialer *websocket.Dialer
+	network asterCommon.Network
+	logger  log.Logger
+	client  *resty.Client
+	dialer  *websocket.Dialer
 }
 
 type WebSocketOptions func(*WebSocketOption)
 
 func defaultWebSocketOption() *WebSocketOption {
 	return &WebSocketOption{
-		logger: log.GetDefaultLogger(),
-		client: defaultHttpClient(),
-		dialer: defaultDialer(),
+		network: asterCommon.Mainnet,
+		logger:  log.GetDefaultLogger(),
+		client:  defaultHttpClient(),
+		dialer:  defaultDialer(),
 	}
 }
 
@@ -178,9 +174,11 @@ func defaultDialer() *websocket.Dialer {
 	}
 }
 
-func WithWebSocketBaseURL(baseURL string) WebSocketOptions {
+// WithWebSocketNetwork selects the Aster network for the WebSocket client.
+// Defaults to common.Mainnet.
+func WithWebSocketNetwork(network asterCommon.Network) WebSocketOptions {
 	return func(opt *WebSocketOption) {
-		opt.client.SetBaseURL(baseURL)
+		opt.network = network
 	}
 }
 

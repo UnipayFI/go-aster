@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/UnipayFI/go-aster/v3/client"
-	"github.com/UnipayFI/go-aster/v3/common"
 	"github.com/UnipayFI/go-aster/v3/request"
 )
 
@@ -16,11 +15,7 @@ type SpotClient struct {
 }
 
 func NewSpotClient(options ...client.Options) *SpotClient {
-	options = append(
-		[]client.Options{client.WithBaseURL(common.DEFAULT_SPOT_BASE_URL)},
-		options...,
-	)
-	return &SpotClient{client.NewClient(options...)}
+	return &SpotClient{client.NewClient(client.ProductSpot, options...)}
 }
 
 // SyncServerTime aligns the client's microsecond nonce generator with the
@@ -46,9 +41,5 @@ type SpotWebSocketClient struct {
 }
 
 func NewSpotWebSocketClient(options ...client.WebSocketOptions) *SpotWebSocketClient {
-	options = append(
-		[]client.WebSocketOptions{client.WithWebSocketBaseURL(common.DEFAULT_SPOT_WEBSOCKET_BASE_URL)},
-		options...,
-	)
-	return &SpotWebSocketClient{client.NewWebSocketClient(options...)}
+	return &SpotWebSocketClient{client.NewWebSocketClient(client.ProductSpot, options...)}
 }

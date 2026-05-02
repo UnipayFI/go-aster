@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/UnipayFI/go-aster/v3/client"
-	"github.com/UnipayFI/go-aster/v3/common"
 	"github.com/UnipayFI/go-aster/v3/request"
 )
 
@@ -16,11 +15,7 @@ type FuturesClient struct {
 }
 
 func NewFuturesClient(options ...client.Options) *FuturesClient {
-	options = append(
-		[]client.Options{client.WithBaseURL(common.DEFAULT_FUTURES_BASE_URL)},
-		options...,
-	)
-	return &FuturesClient{client.NewClient(options...)}
+	return &FuturesClient{client.NewClient(client.ProductFutures, options...)}
 }
 
 func (c *FuturesClient) SyncServerTime(ctx context.Context) error {
@@ -42,9 +37,5 @@ type FuturesWebSocketClient struct {
 }
 
 func NewFuturesWebSocketClient(options ...client.WebSocketOptions) *FuturesWebSocketClient {
-	options = append(
-		[]client.WebSocketOptions{client.WithWebSocketBaseURL(common.DEFAULT_FUTURES_WEBSOCKET_BASE_URL)},
-		options...,
-	)
-	return &FuturesWebSocketClient{client.NewWebSocketClient(options...)}
+	return &FuturesWebSocketClient{client.NewWebSocketClient(client.ProductFutures, options...)}
 }

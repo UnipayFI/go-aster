@@ -7,11 +7,30 @@ import (
 	"sync"
 	"time"
 
+	asterCommon "github.com/UnipayFI/go-aster/v3/common"
 	"github.com/UnipayFI/go-aster/v3/pkg/log"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/go-resty/resty/v2"
 )
+
+// Product distinguishes the spot and futures REST endpoints. It is supplied by
+// the spot/futures package wrappers; end users do not pass this directly.
+type Product int
+
+const (
+	ProductSpot Product = iota
+	ProductFutures
+)
+
+func restBaseURL(product Product, n asterCommon.Network) string {
+	switch product {
+	case ProductFutures:
+		return n.FuturesBaseURL()
+	default:
+		return n.SpotBaseURL()
+	}
+}
 
 // SignFn signs an EIP-712 typed-data payload using the signer's private key.
 // The msg argument is the URL-encoded query string of the request parameters
@@ -51,17 +70,19 @@ type OrderCount struct {
 	Count1d  int64
 }
 
-func NewClient(options ...Options) *Client {
+func NewClient(product Product, options ...Options) *Client {
 	opt := defaultOption()
 	for _, option := range options {
 		option(opt)
 	}
 
+	opt.client.SetBaseURL(restBaseURL(product, opt.network))
+
 	c := &Client{
 		client:        opt.client,
 		userAddress:   opt.userAddress,
 		signerAddress: opt.signerAddress,
-		chainID:       opt.chainID,
+		chainID:       opt.network.ChainID(),
 		recvWindow:    opt.recvWindow,
 		logger:        opt.logger,
 		signFn:        opt.signFn,

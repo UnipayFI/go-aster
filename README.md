@@ -19,7 +19,7 @@ Go SDK for the [Aster DEX](https://www.asterdex.com) **V3** API (Spot + Futures,
 - ✅ **Flexible Signer**: pluggable `SignFn` for HSM, TEE, or remote signing
 - ✅ **TEE Injection**: `WithTEEAuth` lets the signer's private key stay inside the enclave — the SDK only holds the user/signer addresses and delegates signing via `WithSignRequestFn`
 - ✅ **Proxy Support**: `WithProxy` / `WithWebSocketProxy` route REST and WebSocket traffic through HTTP, HTTPS, or SOCKS5 (`socks5` / `socks5h`) proxies, with optional `user:pass@` auth in the URL
-- ✅ **Mainnet & Testnet**: chainId `1666` (default) / `714` switchable via options
+- ✅ **Mainnet & Testnet**: switch with `WithNetwork(common.Mainnet|common.Testnet)` — base URL and chainId both follow
 
 ---
 
@@ -89,13 +89,14 @@ aster.NewFuturesWebSocketClient(...)  // wss://fstream.asterdex.com
 ```go
 client.WithAuth(userAddress, signerPrivateKeyHex string)
 client.WithTEEAuth(userAddress, signerAddress string) // TEE/HSM mode: no local private key
-client.WithBaseURL(url string)          // override default endpoint
-client.WithChainID(int64)               // 1666 mainnet (default) / 714 testnet
+client.WithNetwork(common.Network)      // common.Mainnet (default) / common.Testnet — sets base URL + chainId
 client.WithLogger(log.Logger)           // slog-compatible interface
 client.WithSignRequestFn(client.SignFn) // custom signer (HSM / TEE / remote)
 client.WithRecvWindow(int64)
 client.WithTimeOffset(int64)            // ms; aligns nonce with server clock
 ```
+
+For WebSocket clients, use `client.WithWebSocketNetwork(common.Network)`.
 
 ---
 
@@ -206,7 +207,7 @@ c.NewBindSubAccountService(childAddr, name, user, nonce, childSig, sig).
 V3 signing uses a fixed EIP-712 typed-data envelope:
 
 - `domain.name = "AsterSignTransaction"`, `version = "1"`, `verifyingContract = 0x000...0`
-- `chainId = 1666` (mainnet) / `714` (testnet)
+- `chainId = 1666` (mainnet) / `714` (testnet) — derived from `WithNetwork`
 - `primaryType = "Message"`, single field `msg` of type `string`
 - `msg` value = the URL-encoded query string of the request (already including `nonce` and `signer`)
 - Output signature has `v` adjusted to `27/28` to match `eth_account.sign_message`
