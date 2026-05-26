@@ -27,6 +27,7 @@ type Option struct {
 	signerAddress       string
 	signerPrivateKeyHex string
 	network             asterCommon.Network
+	baseURL             string
 	recvWindow          int64
 	logger              log.Logger
 	signFn              SignFn
@@ -60,6 +61,16 @@ func defaultHttpClient() *resty.Client {
 func WithNetwork(network asterCommon.Network) Options {
 	return func(opt *Option) {
 		opt.network = network
+	}
+}
+
+// WithBaseURL overrides the REST base URL derived from WithNetwork. Use it to
+// point the client at a custom or proxied endpoint; the EIP-712 chainId still
+// follows the selected network. An empty value is ignored, keeping the
+// network default.
+func WithBaseURL(baseURL string) Options {
+	return func(opt *Option) {
+		opt.baseURL = baseURL
 	}
 }
 
@@ -147,6 +158,7 @@ func WithProxy(proxyURL string) Options {
 
 type WebSocketOption struct {
 	network asterCommon.Network
+	baseURL string
 	logger  log.Logger
 	client  *resty.Client
 	dialer  *websocket.Dialer
@@ -179,6 +191,15 @@ func defaultDialer() *websocket.Dialer {
 func WithWebSocketNetwork(network asterCommon.Network) WebSocketOptions {
 	return func(opt *WebSocketOption) {
 		opt.network = network
+	}
+}
+
+// WithWebSocketBaseURL overrides the WebSocket base URL derived from
+// WithWebSocketNetwork. Use it to point at a custom or proxied stream
+// endpoint. An empty value is ignored, keeping the network default.
+func WithWebSocketBaseURL(baseURL string) WebSocketOptions {
+	return func(opt *WebSocketOption) {
+		opt.baseURL = baseURL
 	}
 }
 

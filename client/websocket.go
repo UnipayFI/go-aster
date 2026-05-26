@@ -27,7 +27,11 @@ func NewWebSocketClient(product Product, options ...WebSocketOptions) *WebSocket
 	for _, option := range options {
 		option(opt)
 	}
-	opt.client.SetBaseURL(wsBaseURL(product, opt.network))
+	baseURL := wsBaseURL(product, opt.network)
+	if opt.baseURL != "" {
+		baseURL = opt.baseURL
+	}
+	opt.client.SetBaseURL(baseURL)
 	return &WebSocketClient{
 		client: opt.client,
 		logger: opt.logger,

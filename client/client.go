@@ -76,7 +76,11 @@ func NewClient(product Product, options ...Options) *Client {
 		option(opt)
 	}
 
-	opt.client.SetBaseURL(restBaseURL(product, opt.network))
+	baseURL := restBaseURL(product, opt.network)
+	if opt.baseURL != "" {
+		baseURL = opt.baseURL
+	}
+	opt.client.SetBaseURL(baseURL)
 
 	c := &Client{
 		client:        opt.client,

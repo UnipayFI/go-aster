@@ -90,13 +90,14 @@ aster.NewFuturesWebSocketClient(...)  // wss://fstream.asterdex.com
 client.WithAuth(userAddress, signerPrivateKeyHex string)
 client.WithTEEAuth(userAddress, signerAddress string) // TEE/HSM mode: no local private key
 client.WithNetwork(common.Network)      // common.Mainnet (default) / common.Testnet — sets base URL + chainId
+client.WithBaseURL(string)              // override the network's REST base URL (chainId still follows WithNetwork)
 client.WithLogger(log.Logger)           // slog-compatible interface
 client.WithSignRequestFn(client.SignFn) // custom signer (HSM / TEE / remote)
 client.WithRecvWindow(int64)
 client.WithTimeOffset(int64)            // ms; aligns nonce with server clock
 ```
 
-For WebSocket clients, use `client.WithWebSocketNetwork(common.Network)`.
+For WebSocket clients, use `client.WithWebSocketNetwork(common.Network)` and `client.WithWebSocketBaseURL(string)` (the base URL override likewise takes priority over the network default).
 
 ---
 
