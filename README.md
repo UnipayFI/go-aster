@@ -8,6 +8,10 @@ Go SDK for the [Aster DEX](https://www.asterdex.com) **V3** API (Spot + Futures,
 
 > Aster V3 replaces the legacy HMAC-SHA256 auth with an **API-wallet model** based on EIP-712 typed data and ECDSA signatures. The legacy V1 API stopped issuing new keys on 2026-03-25; existing keys still work, but ongoing development happens here on V3. If you need V1, switch to the `V1(Legacy)` branch.
 
+| API                                              | Aligned to                                                                                          |
+| ------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
+| Spot + Futures V3 REST + WebSocket (public / private) | [2026-4-24](https://asterdex.github.io/aster-api-website/changelog/upcoming-changes/) |
+
 ---
 
 ## Features
