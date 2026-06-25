@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/UnipayFI/go-aster/v3/request"
+	"github.com/shopspring/decimal"
 )
 
 // Sub-account endpoints are unusual: they require signatures from the *master*
@@ -269,6 +270,90 @@ func (s *SubAccountTransferService) Do(ctx context.Context) (*GenericCodeMsg, er
 	}
 	req := request.Post(s.c, ctx, "/fapi/v3/subAccountTransfer", params)
 	return request.Do[GenericCodeMsg](req)
+}
+
+// MigrateUserAssetsService -- POST /fapi/v3/asset/migrateUser (WITHDRAW)
+//
+// Migrates every positive-balance asset from a source account into the
+// authenticated user's account. The signature must be produced with the
+// *source* user's wallet private key (not the configured signer), so -- like
+// the sub-account flows -- the caller supplies the already-computed signature.
+// Message body: user={user}&nonce={nonce}
+//
+// The source account must have no open positions and no open orders, and up to
+// 300 assets are processed per batch. Record the returned batchId to query
+// status via MigrateUserAssetsHistoryService.
+type MigrateUserAssetsService struct {
+	c         *FuturesClient
+	user      string
+	nonce     int64
+	signature string
+}
+
+func (c *FuturesClient) NewMigrateUserAssetsService(user string, nonce int64, signature string) *MigrateUserAssetsService {
+	return &MigrateUserAssetsService{c: c, user: user, nonce: nonce, signature: signature}
+}
+
+func (s *MigrateUserAssetsService) Do(ctx context.Context) (*MigrateUserAssetsResponse, error) {
+	req := request.Post(s.c, ctx, "/fapi/v3/asset/migrateUser", map[string]string{
+		"user":      s.user,
+		"nonce":     formatInt64(s.nonce),
+		"signature": s.signature,
+	})
+	return request.Do[MigrateUserAssetsResponse](req)
+}
+
+// MigrateUserAssetsResponse carries the batchId used to query migration status.
+// batchId is empty when the source account had no positive-balance assets.
+type MigrateUserAssetsResponse struct {
+	BatchID string `json:"batchId"`
+}
+
+// MigrateUserAssetsHistoryService -- GET /fapi/v3/asset/migrateUser/history (USER_DATA)
+//
+// Queries a migration batch by batchId. Signs with the regular configured
+// signer, so this calls WithSignature.
+type MigrateUserAssetsHistoryService struct {
+	c       *FuturesClient
+	batchID string
+}
+
+func (c *FuturesClient) NewMigrateUserAssetsHistoryService(batchID string) *MigrateUserAssetsHistoryService {
+	return &MigrateUserAssetsHistoryService{c: c, batchID: batchID}
+}
+
+func (s *MigrateUserAssetsHistoryService) Do(ctx context.Context) (*MigrateUserAssetsHistory, error) {
+	req := request.Get(ctx, s.c, "/fapi/v3/asset/migrateUser/history", map[string]string{
+		"batchId": s.batchID,
+	}).WithSignature()
+	return request.Do[MigrateUserAssetsHistory](req)
+}
+
+type MigrateUserAssetsHistory struct {
+	BatchID         string                    `json:"batchId"`
+	TotalCount      int                       `json:"totalCount"`
+	SuccessCount    int                       `json:"successCount"`
+	ProcessingCount int                       `json:"processingCount"`
+	FailCount       int                       `json:"failCount"`
+	InitCount       int                       `json:"initCount"`
+	Details         []MigrateUserAssetsDetail `json:"details"`
+}
+
+// MigrateUserAssetsDetail is one per-asset migration record. status uses
+// I=pending, S=success, F=failed; fromStatus/toStatus use S/F/P (processing).
+// tranId is null until the record is processed.
+type MigrateUserAssetsDetail struct {
+	ID            int64           `json:"id"`
+	Asset         string          `json:"asset"`
+	Amount        decimal.Decimal `json:"amount"`
+	TranID        *int64          `json:"tranId"`
+	Status        string          `json:"status"`
+	FromStatus    *string         `json:"fromStatus"`
+	FromErrorCode *string         `json:"fromErrorCode"`
+	FromResponse  *string         `json:"fromResponse"`
+	ToStatus      *string         `json:"toStatus"`
+	ToErrorCode   *string         `json:"toErrorCode"`
+	ToResponse    *string         `json:"toResponse"`
 }
 
 func formatInt64(i int64) string {
