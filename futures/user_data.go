@@ -138,6 +138,12 @@ func decodeUserDataEvent(msg []byte) (*WsUserDataEvent, error) {
 		}
 		ev.TradePro = &x
 		ev.EventTime = x.EventTime
+	case "announcement":
+		var x WsAnnouncementEvent
+		if err := json.Unmarshal(msg, &x); err != nil {
+			return ev, err
+		}
+		ev.Announcement = &x
 	}
 	return ev, nil
 }
@@ -155,6 +161,7 @@ type WsUserDataEvent struct {
 	OrderTradeUpdate    *WsOrderTradeUpdateEvent
 	AccountConfigUpdate *WsAccountConfigUpdateEvent
 	TradePro            *WsTradeProEvent
+	Announcement        *WsAnnouncementEvent
 }
 
 type WsListenKeyExpiredEvent struct {
@@ -163,10 +170,10 @@ type WsListenKeyExpiredEvent struct {
 }
 
 type WsMarginCallEvent struct {
-	EventType          string                  `json:"e"`
-	EventTime          time.Time               `json:"E,format:unixmilli"`
-	CrossWalletBalance decimal.Decimal         `json:"cw"`
-	Positions          []WsMarginCallPosition  `json:"p"`
+	EventType          string                 `json:"e"`
+	EventTime          time.Time              `json:"E,format:unixmilli"`
+	CrossWalletBalance decimal.Decimal        `json:"cw"`
+	Positions          []WsMarginCallPosition `json:"p"`
 }
 
 type WsMarginCallPosition struct {
@@ -181,16 +188,16 @@ type WsMarginCallPosition struct {
 }
 
 type WsAccountUpdateEvent struct {
-	EventType       string             `json:"e"`
-	EventTime       time.Time          `json:"E,format:unixmilli"`
-	TransactionTime time.Time          `json:"T,format:unixmilli"`
-	UpdateData      WsAccountUpdateRO  `json:"a"`
+	EventType       string            `json:"e"`
+	EventTime       time.Time         `json:"E,format:unixmilli"`
+	TransactionTime time.Time         `json:"T,format:unixmilli"`
+	UpdateData      WsAccountUpdateRO `json:"a"`
 }
 
 type WsAccountUpdateRO struct {
-	EventReasonType string                  `json:"m"`
-	Balances        []WsAccountUpdateBal    `json:"B"`
-	Positions       []WsAccountUpdatePos    `json:"P"`
+	EventReasonType string               `json:"m"`
+	Balances        []WsAccountUpdateBal `json:"B"`
+	Positions       []WsAccountUpdatePos `json:"P"`
 }
 
 type WsAccountUpdateBal struct {
@@ -201,58 +208,58 @@ type WsAccountUpdateBal struct {
 }
 
 type WsAccountUpdatePos struct {
-	Symbol               string          `json:"s"`
-	PositionAmount       decimal.Decimal `json:"pa"`
-	EntryPrice           decimal.Decimal `json:"ep"`
-	AccumulatedRealized  decimal.Decimal `json:"cr"`
-	UnrealizedPnL        decimal.Decimal `json:"up"`
-	MarginType           string          `json:"mt"`
-	IsolatedWallet       decimal.Decimal `json:"iw"`
-	PositionSide         PositionSide    `json:"ps"`
+	Symbol              string          `json:"s"`
+	PositionAmount      decimal.Decimal `json:"pa"`
+	EntryPrice          decimal.Decimal `json:"ep"`
+	AccumulatedRealized decimal.Decimal `json:"cr"`
+	UnrealizedPnL       decimal.Decimal `json:"up"`
+	MarginType          string          `json:"mt"`
+	IsolatedWallet      decimal.Decimal `json:"iw"`
+	PositionSide        PositionSide    `json:"ps"`
 }
 
 // WsOrderTradeUpdateEvent corresponds to e=="ORDER_TRADE_UPDATE".
 type WsOrderTradeUpdateEvent struct {
-	EventType       string                 `json:"e"`
-	EventTime       time.Time              `json:"E,format:unixmilli"`
-	TransactionTime time.Time              `json:"T,format:unixmilli"`
-	Order           WsOrderTradeUpdateRO   `json:"o"`
+	EventType       string               `json:"e"`
+	EventTime       time.Time            `json:"E,format:unixmilli"`
+	TransactionTime time.Time            `json:"T,format:unixmilli"`
+	Order           WsOrderTradeUpdateRO `json:"o"`
 }
 
 // WsOrderTradeUpdateRO holds the order-update payload. ExecutionType values:
 // NEW / CANCELED / CALCULATED / EXPIRED / TRADE. OrderStatus may also include
 // NEW_INSURANCE / NEW_ADL for liquidation paths.
 type WsOrderTradeUpdateRO struct {
-	Symbol                 string          `json:"s"`
-	ClientOrderID          string          `json:"c"`
-	Side                   OrderSide       `json:"S"`
-	OrderType              OrderType       `json:"o"`
-	TimeInForce            TimeInForce     `json:"f"`
-	OrigQty                decimal.Decimal `json:"q"`
-	OrigPrice              decimal.Decimal `json:"p"`
-	AvgPrice               decimal.Decimal `json:"ap"`
-	StopPrice              decimal.Decimal `json:"sp"`
-	ExecutionType          string          `json:"x"`
-	OrderStatus            string          `json:"X"`
-	OrderID                int64           `json:"i"`
-	LastFilledQty          decimal.Decimal `json:"l"`
-	AccumFilledQty         decimal.Decimal `json:"z"`
-	LastFilledPrice        decimal.Decimal `json:"L"`
-	CommissionAsset        string          `json:"N"`
-	Commission             decimal.Decimal `json:"n"`
-	OrderTradeTime         time.Time       `json:"T,format:unixmilli"`
-	TradeID                int64           `json:"t"`
-	BidsNotional           decimal.Decimal `json:"b"`
-	AskNotional            decimal.Decimal `json:"a"`
-	IsMaker                bool            `json:"m"`
-	IsReduceOnly           bool            `json:"R"`
-	StopPriceWorkingType   WorkingType     `json:"wt"`
-	OrigOrderType          OrderType       `json:"ot"`
-	PositionSide           PositionSide    `json:"ps"`
-	ClosePosition          bool            `json:"cp"`
-	ActivationPrice        decimal.Decimal `json:"AP"`
-	CallbackRate           decimal.Decimal `json:"cr"`
-	RealizedProfit         decimal.Decimal `json:"rp"`
+	Symbol               string          `json:"s"`
+	ClientOrderID        string          `json:"c"`
+	Side                 OrderSide       `json:"S"`
+	OrderType            OrderType       `json:"o"`
+	TimeInForce          TimeInForce     `json:"f"`
+	OrigQty              decimal.Decimal `json:"q"`
+	OrigPrice            decimal.Decimal `json:"p"`
+	AvgPrice             decimal.Decimal `json:"ap"`
+	StopPrice            decimal.Decimal `json:"sp"`
+	ExecutionType        string          `json:"x"`
+	OrderStatus          string          `json:"X"`
+	OrderID              int64           `json:"i"`
+	LastFilledQty        decimal.Decimal `json:"l"`
+	AccumFilledQty       decimal.Decimal `json:"z"`
+	LastFilledPrice      decimal.Decimal `json:"L"`
+	CommissionAsset      string          `json:"N"`
+	Commission           decimal.Decimal `json:"n"`
+	OrderTradeTime       time.Time       `json:"T,format:unixmilli"`
+	TradeID              int64           `json:"t"`
+	BidsNotional         decimal.Decimal `json:"b"`
+	AskNotional          decimal.Decimal `json:"a"`
+	IsMaker              bool            `json:"m"`
+	IsReduceOnly         bool            `json:"R"`
+	StopPriceWorkingType WorkingType     `json:"wt"`
+	OrigOrderType        OrderType       `json:"ot"`
+	PositionSide         PositionSide    `json:"ps"`
+	ClosePosition        bool            `json:"cp"`
+	ActivationPrice      decimal.Decimal `json:"AP"`
+	CallbackRate         decimal.Decimal `json:"cr"`
+	RealizedProfit       decimal.Decimal `json:"rp"`
 }
 
 // WsAccountConfigUpdateEvent corresponds to e=="ACCOUNT_CONFIG_UPDATE".
@@ -260,11 +267,11 @@ type WsOrderTradeUpdateRO struct {
 // One of TradingPair / AccountInfo will be populated; the other stays at its
 // zero value. Inspect TradingPair.Symbol or AccountInfo (zero check) to tell.
 type WsAccountConfigUpdateEvent struct {
-	EventType       string                       `json:"e"`
-	EventTime       time.Time                    `json:"E,format:unixmilli"`
-	TransactionTime time.Time                    `json:"T,format:unixmilli"`
-	TradingPair     *WsAccountConfigTradingPair  `json:"ac,omitempty"`
-	AccountInfo     *WsAccountConfigAccountInfo  `json:"ai,omitempty"`
+	EventType       string                      `json:"e"`
+	EventTime       time.Time                   `json:"E,format:unixmilli"`
+	TransactionTime time.Time                   `json:"T,format:unixmilli"`
+	TradingPair     *WsAccountConfigTradingPair `json:"ac,omitempty"`
+	AccountInfo     *WsAccountConfigAccountInfo `json:"ai,omitempty"`
 }
 
 type WsAccountConfigTradingPair struct {
@@ -273,9 +280,9 @@ type WsAccountConfigTradingPair struct {
 }
 
 type WsAccountConfigAccountInfo struct {
-	MultiAssetsMode    bool `json:"j"`
-	TokenFeeDeduction  bool `json:"f"`
-	HedgeMode          bool `json:"d"`
+	MultiAssetsMode   bool `json:"j"`
+	TokenFeeDeduction bool `json:"f"`
+	HedgeMode         bool `json:"d"`
 }
 
 // WsTradeProEvent corresponds to e=="tradepro" (Aster on-chain trade event).
@@ -284,6 +291,27 @@ type WsAccountConfigAccountInfo struct {
 // leading "stream" envelope), whereas the listenKey-based user stream
 // delivers it as a flat document. We accept the flat form here; if you
 // subscribe via /stream?streams=, unwrap "data" first.
+// WsAnnouncementEvent corresponds to e=="announcement". Both platform-wide
+// (Public, category NEW_LISTING) and personal (Direct, category DIRECT)
+// announcements share this shape; inspect En.Category / Zh.Category to tell
+// them apart. The English and Chinese variants carry the same metadata.
+type WsAnnouncementEvent struct {
+	EventType string                `json:"e"`
+	En        WsAnnouncementContent `json:"en"`
+	Zh        WsAnnouncementContent `json:"zh"`
+}
+
+type WsAnnouncementContent struct {
+	ID        int64     `json:"i"`
+	Title     string    `json:"t"`
+	Subtitle  string    `json:"s"`
+	Category  string    `json:"c"`
+	Timestamp time.Time `json:"d,format:unixmilli"`
+	Read      bool      `json:"S"`
+	JumpLink  string    `json:"j"`
+	Content   string    `json:"C"`
+}
+
 type WsTradeProEvent struct {
 	EventType       string          `json:"e"`
 	EventTime       time.Time       `json:"E,format:unixmilli"`
