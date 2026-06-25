@@ -116,6 +116,83 @@ const (
 	TransferSpotToFuture TransferKindType = "SPOT_FUTURE"
 )
 
+// STPMode is the account- or order-level Self-Trade Prevention mode.
+type STPMode string
+
+const (
+	STPExpireTaker STPMode = "EXPIRE_TAKER"
+	STPExpireMaker STPMode = "EXPIRE_MAKER"
+	STPExpireBoth  STPMode = "EXPIRE_BOTH"
+)
+
+// PegPriceType selects the BBO reference for a BBO-pegged LIMIT order. The
+// engine resolves the actual price from the order book at trigger time using
+// the chosen BBO level plus pegOffset.
+type PegPriceType string
+
+const (
+	PegCounterparty1 PegPriceType = "COUNTERPARTY_1"
+	PegQueue1        PegPriceType = "QUEUE_1"
+)
+
+// QuantityUnit chooses whether a chase order's quantity is denominated in the
+// base or quote asset.
+type QuantityUnit string
+
+const (
+	QuantityUnitBase  QuantityUnit = "BASE"
+	QuantityUnitQuote QuantityUnit = "QUOTE"
+)
+
+// OffsetType is the unit of a chase order's (max)chaseOffset.
+type OffsetType string
+
+const (
+	OffsetAbsolute   OffsetType = "ABSOLUTE"
+	OffsetPercentage OffsetType = "PERCENTAGE"
+)
+
+// StrategyType discriminates the conditional-order strategies accepted by the
+// strategy-order endpoints.
+type StrategyType string
+
+const (
+	StrategyOTO   StrategyType = "OTO"
+	StrategyOCO   StrategyType = "OCO"
+	StrategyOTOCO StrategyType = "OTOCO"
+)
+
+// SecurityType tags a strategy sub-order's product.
+type SecurityType string
+
+const (
+	SecurityUSDTFutures SecurityType = "USDT_FUTURES"
+	SecurityCoinFutures SecurityType = "COIN_FUTURES"
+	SecurityOptions     SecurityType = "OPTIONS"
+)
+
+// StrategyDrivenOn is the sub-order event that activates a strategy trigger.
+type StrategyDrivenOn string
+
+const (
+	DrivenOnNew                     StrategyDrivenOn = "NEW"
+	DrivenOnPartiallyFilledOrFilled StrategyDrivenOn = "PARTIALLY_FILLED_OR_FILLED"
+	DrivenOnFilled                  StrategyDrivenOn = "FILLED"
+	DrivenOnCanceled                StrategyDrivenOn = "CANCELED"
+	DrivenOnReplaced                StrategyDrivenOn = "REPLACED"
+	DrivenOnStopped                 StrategyDrivenOn = "STOPPED"
+	DrivenOnRejected                StrategyDrivenOn = "REJECTED"
+	DrivenOnExpired                 StrategyDrivenOn = "EXPIRED"
+)
+
+// StrategyTrigger is the action a strategy trigger performs when activated.
+type StrategyTrigger string
+
+const (
+	StrategyTriggerPlaceOrder  StrategyTrigger = "PLACE_ORDER"
+	StrategyTriggerCancelOrder StrategyTrigger = "CANCEL_ORDER"
+)
+
 // KlineInterval values accepted by /fapi/v3/klines.
 type KlineInterval string
 
