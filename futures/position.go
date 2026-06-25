@@ -82,6 +82,44 @@ type MultiAssetsModeResponse struct {
 	MultiAssetsMargin bool `json:"multiAssetsMargin"`
 }
 
+// ChangeSTPModeService -- POST /fapi/v3/stpMode (TRADE)
+//
+// Sets the account-level Self-Trade Prevention mode applied to every symbol by
+// default; individual orders may override it via PlaceOrderService.SetSTPMode.
+type ChangeSTPModeService struct {
+	c       *FuturesClient
+	stpMode STPMode
+}
+
+func (c *FuturesClient) NewChangeSTPModeService(mode STPMode) *ChangeSTPModeService {
+	return &ChangeSTPModeService{c: c, stpMode: mode}
+}
+
+func (s *ChangeSTPModeService) Do(ctx context.Context) (*GenericCodeMsg, error) {
+	req := request.Post(s.c, ctx, "/fapi/v3/stpMode", map[string]string{
+		"stpMode": string(s.stpMode),
+	}).WithSignature()
+	return request.Do[GenericCodeMsg](req)
+}
+
+// GetSTPModeService -- GET /fapi/v3/stpMode (USER_DATA)
+type GetSTPModeService struct {
+	c *FuturesClient
+}
+
+func (c *FuturesClient) NewGetSTPModeService() *GetSTPModeService {
+	return &GetSTPModeService{c: c}
+}
+
+func (s *GetSTPModeService) Do(ctx context.Context) (*STPModeResponse, error) {
+	req := request.Get(ctx, s.c, "/fapi/v3/stpMode").WithSignature()
+	return request.Do[STPModeResponse](req)
+}
+
+type STPModeResponse struct {
+	STPMode STPMode `json:"stpMode"`
+}
+
 // ChangeLeverageService -- POST /fapi/v3/leverage (TRADE)
 type ChangeLeverageService struct {
 	c        *FuturesClient
