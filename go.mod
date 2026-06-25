@@ -1,10 +1,10 @@
 module github.com/UnipayFI/go-aster/v3
 
-go 1.25.1
+go 1.26
 
 require (
 	github.com/ethereum/go-ethereum v1.14.12
-	github.com/go-json-experiment/json v0.0.0-20251027170946-4849db3c2f7e
+	github.com/go-json-experiment/json v0.0.0-20260504200034-64a0a05799db
 	github.com/go-resty/resty/v2 v2.17.0
 	github.com/gorilla/websocket v1.5.3
 	github.com/shopspring/decimal v1.4.0
