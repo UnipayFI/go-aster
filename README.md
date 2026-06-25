@@ -10,14 +10,14 @@ Go SDK for the [Aster DEX](https://www.asterdex.com) **V3** API (Spot + Futures,
 
 | API                                              | Aligned to                                                                                          |
 | ------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
-| Spot + Futures V3 REST + WebSocket (public / private) | [2026-4-24](https://asterdex.github.io/aster-api-website/changelog/upcoming-changes/) |
+| Spot + Futures V3 REST + WebSocket (public / private) | [2026-6-17](https://asterdex.github.io/aster-api-website/changelog/upcoming-changes/) |
 
 ---
 
 ## Features
 
 - ✅ **Spot REST**: 24 endpoints — market data, orders, account, transfers, withdrawals
-- ✅ **Futures REST**: ~45 endpoints — market, trading, position, account, MMP, sub-accounts
+- ✅ **Futures REST**: ~55 endpoints — market, trading (incl. chase & strategy orders), position, account, STP, MMP, sub-accounts, asset migration, agent registration, announcements
 - ✅ **WebSocket Streaming**: full Spot & Futures market streams plus user data streams
 - ✅ **Sub-account Flows**: bind / create / update / transfer with master + child signature inputs
 - ✅ **Flexible Signer**: pluggable `SignFn` for HSM, TEE, or remote signing
