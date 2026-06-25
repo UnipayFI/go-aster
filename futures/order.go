@@ -14,30 +14,30 @@ import (
 // TRAILING_STOP_MARKET-only fields (ActivatePrice, PriceRate) are populated
 // only for that order type; other fields are common.
 type Order struct {
-	OrderId         int64           `json:"orderId"`
-	Symbol          string          `json:"symbol"`
-	Status          OrderStatus     `json:"status"`
-	ClientOrderId   string          `json:"clientOrderId"`
-	Price           decimal.Decimal `json:"price"`
-	AvgPrice        decimal.Decimal `json:"avgPrice"`
-	OrigQty         decimal.Decimal `json:"origQty"`
-	ExecutedQty     decimal.Decimal `json:"executedQty"`
-	CumQty          decimal.Decimal `json:"cumQty"`
-	CumQuote        decimal.Decimal `json:"cumQuote"`
-	TimeInForce     TimeInForce     `json:"timeInForce"`
-	Type            OrderType       `json:"type"`
-	OrigType        OrderType       `json:"origType"`
-	ReduceOnly      bool            `json:"reduceOnly"`
-	ClosePosition   bool            `json:"closePosition"`
-	Side            OrderSide       `json:"side"`
-	PositionSide    PositionSide    `json:"positionSide"`
-	StopPrice       decimal.Decimal `json:"stopPrice"`
-	WorkingType     WorkingType     `json:"workingType"`
-	PriceProtect    bool            `json:"priceProtect"`
-	ActivatePrice   decimal.Decimal `json:"activatePrice"`
-	PriceRate       decimal.Decimal `json:"priceRate"`
-	Time            time.Time       `json:"time,format:unixmilli"`
-	UpdateTime      time.Time       `json:"updateTime,format:unixmilli"`
+	OrderId       int64           `json:"orderId"`
+	Symbol        string          `json:"symbol"`
+	Status        OrderStatus     `json:"status"`
+	ClientOrderId string          `json:"clientOrderId"`
+	Price         decimal.Decimal `json:"price"`
+	AvgPrice      decimal.Decimal `json:"avgPrice"`
+	OrigQty       decimal.Decimal `json:"origQty"`
+	ExecutedQty   decimal.Decimal `json:"executedQty"`
+	CumQty        decimal.Decimal `json:"cumQty"`
+	CumQuote      decimal.Decimal `json:"cumQuote"`
+	TimeInForce   TimeInForce     `json:"timeInForce"`
+	Type          OrderType       `json:"type"`
+	OrigType      OrderType       `json:"origType"`
+	ReduceOnly    bool            `json:"reduceOnly"`
+	ClosePosition bool            `json:"closePosition"`
+	Side          OrderSide       `json:"side"`
+	PositionSide  PositionSide    `json:"positionSide"`
+	StopPrice     decimal.Decimal `json:"stopPrice"`
+	WorkingType   WorkingType     `json:"workingType"`
+	PriceProtect  bool            `json:"priceProtect"`
+	ActivatePrice decimal.Decimal `json:"activatePrice"`
+	PriceRate     decimal.Decimal `json:"priceRate"`
+	Time          time.Time       `json:"time,format:unixmilli"`
+	UpdateTime    time.Time       `json:"updateTime,format:unixmilli"`
 }
 
 // PlaceOrderService -- POST /fapi/v3/order (TRADE)
@@ -123,6 +123,28 @@ func (s *PlaceOrderService) SetNewOrderRespType(r ResponseType) *PlaceOrderServi
 	return s
 }
 
+// SetPegPriceType turns a LIMIT order into a BBO-pegged order; the engine
+// resolves the actual price from the order book at trigger time using the
+// chosen BBO level plus the pegOffset.
+func (s *PlaceOrderService) SetPegPriceType(p PegPriceType) *PlaceOrderService {
+	s.params["pegPriceType"] = string(p)
+	return s
+}
+
+// SetPegOffset sets the signed offset from the BBO. BUY orders use a
+// non-positive value, SELL a non-negative value; must be a tickSize multiple.
+func (s *PlaceOrderService) SetPegOffset(o decimal.Decimal) *PlaceOrderService {
+	s.params["pegOffset"] = o.String()
+	return s
+}
+
+// SetSTPMode overrides the account-level Self-Trade Prevention mode for this
+// single order.
+func (s *PlaceOrderService) SetSTPMode(m STPMode) *PlaceOrderService {
+	s.params["stpMode"] = string(m)
+	return s
+}
+
 func (s *PlaceOrderService) Do(ctx context.Context) (*Order, error) {
 	req := request.Post(s.c, ctx, "/fapi/v3/order", s.params).WithSignature()
 	return request.Do[Order](req)
@@ -164,6 +186,96 @@ func (s *ModifyOrderService) SetPrice(p decimal.Decimal) *ModifyOrderService {
 func (s *ModifyOrderService) Do(ctx context.Context) (*Order, error) {
 	req := request.Put(ctx, s.c, "/fapi/v3/order", s.params).WithSignature()
 	return request.Do[Order](req)
+}
+
+// PlaceChaseOrderService -- POST /fapi/v3/chase (TRADE)
+//
+// A Chase order is a BBO-pegged GTX (post-only) limit order. The strategy
+// service re-pegs the order to bid1-chaseOffset (BUY) or ask1+chaseOffset
+// (SELL) each tick until it fills, is cancelled (via DELETE /fapi/v3/order),
+// or the market moves beyond maxChaseOffset from the original BBO. To stop a
+// BBO-pegged order from re-resolving you must use this endpoint rather than a
+// plain modify.
+//
+// Note: chaseOffsetType only supports ABSOLUTE for now; PERCENTAGE is rejected
+// with UNSUPPORTED_OPERATION. maxChaseOffsetType supports both.
+type PlaceChaseOrderService struct {
+	c      *FuturesClient
+	params map[string]string
+}
+
+func (c *FuturesClient) NewPlaceChaseOrderService(symbol string, side OrderSide, quantityUnit QuantityUnit, quantity decimal.Decimal) *PlaceChaseOrderService {
+	return &PlaceChaseOrderService{c: c, params: map[string]string{
+		"symbol":       symbol,
+		"side":         string(side),
+		"quantityUnit": string(quantityUnit),
+		"quantity":     quantity.String(),
+	}}
+}
+
+func (s *PlaceChaseOrderService) SetPositionSide(p PositionSide) *PlaceChaseOrderService {
+	s.params["positionSide"] = string(p)
+	return s
+}
+
+func (s *PlaceChaseOrderService) SetReduceOnly(reduceOnly bool) *PlaceChaseOrderService {
+	s.params["reduceOnly"] = strconv.FormatBool(reduceOnly)
+	return s
+}
+
+func (s *PlaceChaseOrderService) SetChaseOffset(o decimal.Decimal) *PlaceChaseOrderService {
+	s.params["chaseOffset"] = o.String()
+	return s
+}
+
+func (s *PlaceChaseOrderService) SetChaseOffsetType(t OffsetType) *PlaceChaseOrderService {
+	s.params["chaseOffsetType"] = string(t)
+	return s
+}
+
+func (s *PlaceChaseOrderService) SetMaxChaseOffset(o decimal.Decimal) *PlaceChaseOrderService {
+	s.params["maxChaseOffset"] = o.String()
+	return s
+}
+
+func (s *PlaceChaseOrderService) SetMaxChaseOffsetType(t OffsetType) *PlaceChaseOrderService {
+	s.params["maxChaseOffsetType"] = string(t)
+	return s
+}
+
+func (s *PlaceChaseOrderService) SetTimeInForce(tif TimeInForce) *PlaceChaseOrderService {
+	s.params["timeInForce"] = string(tif)
+	return s
+}
+
+func (s *PlaceChaseOrderService) SetClientStrategyId(id string) *PlaceChaseOrderService {
+	s.params["clientStrategyId"] = id
+	return s
+}
+
+func (s *PlaceChaseOrderService) Do(ctx context.Context) (*ChaseOrder, error) {
+	req := request.Post(s.c, ctx, "/fapi/v3/chase", s.params).WithSignature()
+	return request.Do[ChaseOrder](req)
+}
+
+// ChaseOrder is the response shape for a placed chase strategy order.
+type ChaseOrder struct {
+	StrategyId         int64           `json:"strategyId"`
+	ClientStrategyId   string          `json:"clientStrategyId"`
+	Symbol             string          `json:"symbol"`
+	Side               OrderSide       `json:"side"`
+	PositionSide       PositionSide    `json:"positionSide"`
+	Quantity           decimal.Decimal `json:"quantity"`
+	QuantityUnit       QuantityUnit    `json:"quantityUnit"`
+	ReduceOnly         bool            `json:"reduceOnly"`
+	ChaseOffset        decimal.Decimal `json:"chaseOffset"`
+	ChaseOffsetType    OffsetType      `json:"chaseOffsetType"`
+	MaxChaseOffset     decimal.Decimal `json:"maxChaseOffset"`
+	MaxChaseOffsetType OffsetType      `json:"maxChaseOffsetType"`
+	TimeInForce        TimeInForce     `json:"timeInForce"`
+	StrategyStatus     string          `json:"strategyStatus"`
+	BookTime           time.Time       `json:"bookTime,format:unixmilli"`
+	UpdateTime         time.Time       `json:"updateTime,format:unixmilli"`
 }
 
 // BatchOrderItem mirrors the per-order parameters accepted in batchOrders.
