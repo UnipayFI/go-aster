@@ -22,8 +22,10 @@ import (
 //
 // EVM addresses wrap that string as message.msg in the documented EIP-712
 // typed data (signatureChainId=56); Solana addresses sign with Ed25519
-// (signatureChainId=101). ipWhitelist is required and must not be empty when
-// canWithdraw is true.
+// (signatureChainId=101). The EIP-712 domain.chainId MUST equal the
+// signatureChainId request parameter (56 for EVM, 101 for Solana) -- it is no
+// longer the network-wide 1666/714 chainId used by the other V3 flows.
+// ipWhitelist is required and must not be empty when canWithdraw is true.
 type RegisterAndApproveAgentService struct {
 	c      *FuturesClient
 	params map[string]string
