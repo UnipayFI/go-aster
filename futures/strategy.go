@@ -51,6 +51,8 @@ type PlaceStrategyOrderService struct {
 	c                *FuturesClient
 	strategyType     StrategyType
 	clientStrategyId string
+	builder          string
+	feeRate          string
 	subOrders        []StrategySubOrder
 }
 
@@ -60,6 +62,18 @@ func (c *FuturesClient) NewPlaceStrategyOrderService(strategyType StrategyType, 
 
 func (s *PlaceStrategyOrderService) SetClientStrategyId(id string) *PlaceStrategyOrderService {
 	s.clientStrategyId = id
+	return s
+}
+
+// SetBuilder sets the builder address that shares in the order fee.
+func (s *PlaceStrategyOrderService) SetBuilder(builder string) *PlaceStrategyOrderService {
+	s.builder = builder
+	return s
+}
+
+// SetFeeRate sets the custom fee rate paid to the builder.
+func (s *PlaceStrategyOrderService) SetFeeRate(r decimal.Decimal) *PlaceStrategyOrderService {
+	s.feeRate = r.String()
 	return s
 }
 
@@ -74,6 +88,12 @@ func (s *PlaceStrategyOrderService) Do(ctx context.Context) (*StrategyOrderResul
 	}
 	if s.clientStrategyId != "" {
 		params["clientStrategyId"] = s.clientStrategyId
+	}
+	if s.builder != "" {
+		params["builder"] = s.builder
+	}
+	if s.feeRate != "" {
+		params["feeRate"] = s.feeRate
 	}
 	req := request.Post(s.c, ctx, "/fapi/v3/placeStrategyOrder", params).WithSignature()
 	return request.Do[StrategyOrderResult](req)
