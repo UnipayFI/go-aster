@@ -212,16 +212,19 @@ const (
 
 // SubAccountTransferService -- POST /fapi/v3/subAccountTransfer (TRADE)
 //
-// Signed with the user's wallet private key (master OR sub depending on flow,
-// see scenario table in the V3 doc). Message body:
+// Signed with the user's wallet private key. `user` is the signing account
+// address -- the master account in most scenarios, or the sub-account address
+// when a sub-account initiates the transfer itself. There is no `signer`
+// parameter: the signature is always produced with the `user` account's own
+// wallet key (see the scenario table in the V3 doc). Message body:
 //
 // Without fromAccountAddress:
 //
-//	toAccountAddress={...}&asset={...}&amount={...}&kindType={...}&nonce={...}&user={...}&signer={...}
+//	toAccountAddress={...}&asset={...}&amount={...}&kindType={...}&nonce={...}&user={...}
 //
 // With fromAccountAddress:
 //
-//	toAccountAddress={...}&asset={...}&amount={...}&kindType={...}&nonce={...}&user={...}&signer={...}&fromAccountAddress={...}
+//	toAccountAddress={...}&asset={...}&amount={...}&kindType={...}&nonce={...}&user={...}&fromAccountAddress={...}
 type SubAccountTransferService struct {
 	c                  *FuturesClient
 	toAccountAddress   string
@@ -230,12 +233,11 @@ type SubAccountTransferService struct {
 	kindType           SubAccountTransferKindType
 	nonce              int64
 	user               string
-	signer             string
 	fromAccountAddress string
 	signature          string
 }
 
-func (c *FuturesClient) NewSubAccountTransferService(toAddr, asset, amount string, kind SubAccountTransferKindType, user, signer string, nonce int64, signature string) *SubAccountTransferService {
+func (c *FuturesClient) NewSubAccountTransferService(toAddr, asset, amount string, kind SubAccountTransferKindType, user string, nonce int64, signature string) *SubAccountTransferService {
 	return &SubAccountTransferService{
 		c:                c,
 		toAccountAddress: toAddr,
@@ -244,7 +246,6 @@ func (c *FuturesClient) NewSubAccountTransferService(toAddr, asset, amount strin
 		kindType:         kind,
 		nonce:            nonce,
 		user:             user,
-		signer:           signer,
 		signature:        signature,
 	}
 }
@@ -262,7 +263,6 @@ func (s *SubAccountTransferService) Do(ctx context.Context) (*GenericCodeMsg, er
 		"kindType":         string(s.kindType),
 		"nonce":            formatInt64(s.nonce),
 		"user":             s.user,
-		"signer":           s.signer,
 		"signature":        s.signature,
 	}
 	if s.fromAccountAddress != "" {
