@@ -108,20 +108,46 @@ func (r *Request) WithSignature() *Request {
 	if r.err != nil {
 		return r
 	}
-	if err := r.client.GetAuthError(); err != nil {
-		r.err = fmt.Errorf("auth: %w", err)
+	if err := r.ensureSigner(); err != nil {
+		r.err = err
 		return r
+	}
+	return r.signWithNonce(r.client.NextNonce())
+}
+
+// WithSignatureNonce is like WithSignature but signs over a caller-supplied
+// nonce instead of a fresh monotonic one. The guarded cancel endpoints
+// (guardedCancelOrder / guardedBatchOrders) require this: their nonce must
+// replay the exact value submitted when the order was placed, which the engine
+// uses to guard against duplicate or out-of-order cancellations.
+func (r *Request) WithSignatureNonce(nonce int64) *Request {
+	if r.err != nil {
+		return r
+	}
+	if err := r.ensureSigner(); err != nil {
+		r.err = err
+		return r
+	}
+	return r.signWithNonce(nonce)
+}
+
+// ensureSigner validates that the client is ready to produce a V3 signature.
+func (r *Request) ensureSigner() error {
+	if err := r.client.GetAuthError(); err != nil {
+		return fmt.Errorf("auth: %w", err)
 	}
 	if r.client.GetSignerAddress() == "" {
-		r.err = errors.New("signer not configured: call WithAuth(userAddress, signerPrivateKeyHex)")
-		return r
+		return errors.New("signer not configured: call WithAuth(userAddress, signerPrivateKeyHex)")
 	}
 	if r.client.GetUserAddress() == "" {
-		r.err = errors.New("user address not configured: call WithAuth(userAddress, signerPrivateKeyHex)")
-		return r
+		return errors.New("user address not configured: call WithAuth(userAddress, signerPrivateKeyHex)")
 	}
+	return nil
+}
 
-	nonce := r.client.NextNonce()
+// signWithNonce appends user/nonce/signer, EIP-712-signs the ordered params,
+// and appends the resulting signature.
+func (r *Request) signWithNonce(nonce int64) *Request {
 	signer := r.client.GetSignerAddress()
 	r.params = append(r.params,
 		kv{Key: "user", Value: r.client.GetUserAddress()},

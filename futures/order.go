@@ -457,6 +457,74 @@ func (s *CancelMultipleOrdersService) Do(ctx context.Context) ([]json.RawMessage
 	return *resp, nil
 }
 
+// GuardedCancelOrderService -- DELETE /fapi/v3/guardedCancelOrder (TRADE)
+//
+// Same parameters and response as DELETE /fapi/v3/order, except the signature
+// must replay the exact nonce that was submitted when the order was placed
+// (POST /fapi/v3/order), not a fresh timestamp. The engine uses that on-chain
+// nonce to guard against duplicate or out-of-order cancellations. Either
+// orderId or origClientOrderId must be set.
+type GuardedCancelOrderService struct {
+	c      *FuturesClient
+	nonce  int64
+	params map[string]string
+}
+
+func (c *FuturesClient) NewGuardedCancelOrderService(symbol string, nonce int64) *GuardedCancelOrderService {
+	return &GuardedCancelOrderService{c: c, nonce: nonce, params: map[string]string{"symbol": symbol}}
+}
+
+func (s *GuardedCancelOrderService) SetOrderId(id int64) *GuardedCancelOrderService {
+	s.params["orderId"] = strconv.FormatInt(id, 10)
+	return s
+}
+
+func (s *GuardedCancelOrderService) SetOrigClientOrderId(id string) *GuardedCancelOrderService {
+	s.params["origClientOrderId"] = id
+	return s
+}
+
+func (s *GuardedCancelOrderService) Do(ctx context.Context) (*Order, error) {
+	req := request.Delete(ctx, s.c, "/fapi/v3/guardedCancelOrder", s.params).WithSignatureNonce(s.nonce)
+	return request.Do[Order](req)
+}
+
+// GuardedBatchOrdersService -- DELETE /fapi/v3/guardedBatchOrders (TRADE)
+//
+// Same parameters and response as DELETE /fapi/v3/batchOrders (cancel up to 10
+// orders), except the signature must replay the exact nonce submitted when the
+// orders were placed (POST /fapi/v3/batchOrders), not a fresh timestamp.
+type GuardedBatchOrdersService struct {
+	c      *FuturesClient
+	nonce  int64
+	params map[string]string
+}
+
+func (c *FuturesClient) NewGuardedBatchOrdersService(symbol string, nonce int64) *GuardedBatchOrdersService {
+	return &GuardedBatchOrdersService{c: c, nonce: nonce, params: map[string]string{"symbol": symbol}}
+}
+
+func (s *GuardedBatchOrdersService) SetOrderIdList(ids []int64) *GuardedBatchOrdersService {
+	data, _ := json.Marshal(ids)
+	s.params["orderIdList"] = string(data)
+	return s
+}
+
+func (s *GuardedBatchOrdersService) SetOrigClientOrderIdList(ids []string) *GuardedBatchOrdersService {
+	data, _ := json.Marshal(ids)
+	s.params["origClientOrderIdList"] = string(data)
+	return s
+}
+
+func (s *GuardedBatchOrdersService) Do(ctx context.Context) ([]json.RawMessage, error) {
+	req := request.Delete(ctx, s.c, "/fapi/v3/guardedBatchOrders", s.params).WithSignatureNonce(s.nonce)
+	resp, err := request.Do[[]json.RawMessage](req)
+	if err != nil {
+		return nil, err
+	}
+	return *resp, nil
+}
+
 // CountdownCancelAllService -- POST /fapi/v3/countdownCancelAll (TRADE)
 //
 // Heartbeat-style: call repeatedly to keep extending the countdown. A value
