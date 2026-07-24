@@ -87,9 +87,10 @@ type BuilderUserTrade struct {
 
 // GetBuilderApprovedUserListService -- GET /fapi/v3/builder/approvedUserList (USER_DATA)
 //
-// Queries the users who have approved the caller's address as their builder.
-// The authenticated account is the builder identity; there is no separate
-// builder address parameter. Returns at most 1000 records.
+// Queries the paginated list of users who have approved the caller's address as
+// their builder. The authenticated account is the builder identity; there is no
+// separate builder address parameter. Results are returned page by page under
+// rows[]; when no time filter is set the server returns all approved users.
 type GetBuilderApprovedUserListService struct {
 	c      *FuturesClient
 	params map[string]string
@@ -99,20 +100,46 @@ func (c *FuturesClient) NewGetBuilderApprovedUserListService() *GetBuilderApprov
 	return &GetBuilderApprovedUserListService{c: c, params: map[string]string{}}
 }
 
-// SetStartTime only returns users approved after this timestamp. When unset the
-// server applies no time filter and returns all approved users.
+// SetStartTime only returns users approved at or after this timestamp. When
+// unset the server applies no lower time bound.
 func (s *GetBuilderApprovedUserListService) SetStartTime(t time.Time) *GetBuilderApprovedUserListService {
 	s.params["startTime"] = strconv.FormatInt(t.UnixMilli(), 10)
 	return s
 }
 
-func (s *GetBuilderApprovedUserListService) Do(ctx context.Context) ([]BuilderApprovedUser, error) {
+// SetEndTime only returns users approved at or before this timestamp. When
+// unset the server applies no upper time bound.
+func (s *GetBuilderApprovedUserListService) SetEndTime(t time.Time) *GetBuilderApprovedUserListService {
+	s.params["endTime"] = strconv.FormatInt(t.UnixMilli(), 10)
+	return s
+}
+
+// SetPage sets the pagination page number (default 1).
+func (s *GetBuilderApprovedUserListService) SetPage(page int) *GetBuilderApprovedUserListService {
+	s.params["page"] = strconv.Itoa(page)
+	return s
+}
+
+// SetLimit sets the number of records per page (default 100, maximum 1000).
+func (s *GetBuilderApprovedUserListService) SetLimit(limit int) *GetBuilderApprovedUserListService {
+	s.params["limit"] = strconv.Itoa(limit)
+	return s
+}
+
+func (s *GetBuilderApprovedUserListService) Do(ctx context.Context) (*BuilderApprovedUserList, error) {
 	req := request.Get(ctx, s.c, "/fapi/v3/builder/approvedUserList", s.params).WithSignature()
-	resp, err := request.Do[[]BuilderApprovedUser](req)
-	if err != nil {
-		return nil, err
-	}
-	return *resp, nil
+	return request.Do[BuilderApprovedUserList](req)
+}
+
+// BuilderApprovedUserList is the paginated response of
+// GetBuilderApprovedUserListService.
+type BuilderApprovedUserList struct {
+	Total       int64                 `json:"total"`
+	CurrentPage int                   `json:"currentPage"`
+	TotalPages  int                   `json:"totalPages"`
+	PageSize    int                   `json:"pageSize"`
+	HasMore     bool                  `json:"hasMore"`
+	Rows        []BuilderApprovedUser `json:"rows"`
 }
 
 // BuilderApprovedUser is one user who approved the caller as their builder.
