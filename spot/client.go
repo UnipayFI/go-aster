@@ -19,7 +19,7 @@ func NewSpotClient(options ...client.Options) *SpotClient {
 }
 
 // SyncServerTime aligns the client's microsecond nonce generator with the
-// server clock. V3's nonce window is ±10 seconds, so a few hundred ms of
+// server clock. V3's nonce window is ±60 seconds, so a few hundred ms of
 // drift is harmless, but on long-running processes it's still safer to
 // resync periodically.
 func (c *SpotClient) SyncServerTime(ctx context.Context) error {
