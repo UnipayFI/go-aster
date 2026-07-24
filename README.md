@@ -10,7 +10,7 @@ Go SDK for the [Aster DEX](https://www.asterdex.com) **V3** API (Spot + Futures,
 
 | API                                              | Aligned to                                                                                          |
 | ------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
-| Spot + Futures V3 REST + WebSocket (public / private) | [2026-7-10](https://asterdex.github.io/aster-api-website/changelog/upcoming-changes/) |
+| Spot + Futures V3 REST + WebSocket (public / private) | [2026-7-16](https://asterdex.github.io/aster-api-website/changelog/upcoming-changes/) |
 
 ---
 
