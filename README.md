@@ -10,14 +10,14 @@ Go SDK for the [Aster DEX](https://www.asterdex.com) **V3** API (Spot + Futures,
 
 | API                                              | Aligned to                                                                                          |
 | ------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
-| Spot + Futures V3 REST + WebSocket (public / private) | [2026-7-16](https://asterdex.github.io/aster-api-website/changelog/upcoming-changes/) |
+| Spot + Futures V3 REST + WebSocket (public / private) | [2026-8-17](https://asterdex.github.io/aster-api-website/changelog/upcoming-changes/) |
 
 ---
 
 ## Features
 
-- ✅ **Spot REST**: 24 endpoints — market data, orders, account, transfers, withdrawals
-- ✅ **Futures REST**: ~60 endpoints — market, trading (incl. chase, strategy & guarded-cancel orders), position, account, STP, MMP, sub-accounts, asset migration, agent registration, builder queries, announcements
+- ✅ **Spot REST**: 30 endpoints — market data, orders, account, transfers, withdrawals, Spot Builder (Aster Code)
+- ✅ **Futures REST**: ~60 endpoints — market, trading (incl. chase, strategy & guarded-cancel orders), position, account, STP, MMP, sub-accounts, asset migration, agent registration & approval, builder queries, announcements
 - ✅ **WebSocket Streaming**: full Spot & Futures market streams plus user data streams
 - ✅ **Sub-account Flows**: bind / create / update / transfer with master + child signature inputs
 - ✅ **Flexible Signer**: pluggable `SignFn` for HSM, TEE, or remote signing
@@ -222,9 +222,9 @@ See `request/sign.go` for the implementation and `request/sign_test.go` for the 
 ### Endpoint coverage
 
 <details>
-<summary><b>Spot REST (24)</b></summary>
+<summary><b>Spot REST (30)</b></summary>
 
-`Ping`, `GetServerTime`, `Noop`, `GetExchangeInfo`, `GetDepth`, `GetRecentTrades`, `GetHistoricalTrades`, `GetAggTrades`, `GetKlines`, `Get24hTicker`, `GetTickerPrice`, `GetBookTicker`, `GetCommissionRate`, `PlaceOrder`, `CancelOrder`, `GetOrder`, `GetOpenOrder`, `GetOpenOrders`, `CancelAllOpenOrders`, `GetAllOrders`, `GetTransactionHistory`, `PerpSpotTransfer`, `GetWithdrawFee`, `Withdraw`, `GetAccount`, `GetUserTrades`.
+`Ping`, `GetServerTime`, `Noop`, `GetExchangeInfo`, `GetDepth`, `GetRecentTrades`, `GetHistoricalTrades`, `GetAggTrades`, `GetKlines`, `Get24hTicker`, `GetTickerPrice`, `GetBookTicker`, `GetCommissionRate`, `PlaceOrder`, `CancelOrder`, `GetOrder`, `GetOpenOrder`, `GetOpenOrders`, `CancelAllOpenOrders`, `GetAllOrders`, `GetTransactionHistory`, `PerpSpotTransfer`, `GetWithdrawFee`, `Withdraw`, `GetAccount`, `GetUserTrades`, `ApproveBuilder`, `UpdateBuilder`, `DelBuilder`, `GetBuilders`.
 
 </details>
 
@@ -245,6 +245,7 @@ See `request/sign.go` for the implementation and `request/sign_test.go` for the 
 - **Account**: `Balance`, `Account`, `UserTrades`, `IncomeHistory`, `LeverageBracket`, `CommissionRate`
 - **MMP**: `UpdateMMP`, `GetMMP`, `DeleteMMP`, `ResetMMP`
 - **Sub-accounts**: `Bind`, `Create`, `GetList`, `Update`, `Transfer`
+- **Agent / Builder**: `RegisterAndApproveAgent`, `ApproveAgent`, `GetBuilderUserTrades`, `GetBuilderApprovedUserList`
 
 </details>
 
