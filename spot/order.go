@@ -76,6 +76,22 @@ func (s *PlaceOrderService) SetStopPrice(p decimal.Decimal) *PlaceOrderService {
 	return s
 }
 
+// SetBuilder attributes the order to an approved Spot Builder address. SetFeeRate
+// is required alongside it. Use NewGetBuildersService to look up which Builders
+// the user has approved.
+func (s *PlaceOrderService) SetBuilder(builder string) *PlaceOrderService {
+	s.params["builder"] = builder
+	return s
+}
+
+// SetFeeRate sets the Builder fee rate charged on this order. Only meaningful
+// together with SetBuilder, and the server rejects the order when it exceeds
+// the maxFeeRate the user authorized for that Builder.
+func (s *PlaceOrderService) SetFeeRate(rate decimal.Decimal) *PlaceOrderService {
+	s.params["feeRate"] = rate.String()
+	return s
+}
+
 func (s *PlaceOrderService) Do(ctx context.Context) (*OrderResponse, error) {
 	req := request.Post(s.c, ctx, "/api/v3/order", s.params).WithSignature()
 	return request.Do[OrderResponse](req)
