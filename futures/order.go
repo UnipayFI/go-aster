@@ -331,6 +331,57 @@ func (s *BatchOrdersService) Do(ctx context.Context) ([]json.RawMessage, error) 
 	return *resp, nil
 }
 
+// BatchModifyOrderItem mirrors the per-order parameters accepted in a batch
+// modify. Empty string fields are omitted from the marshalled JSON. Either
+// OrderId or OrigClientOrderId must be set; Quantity and Price are both
+// required even when only one of them changes.
+type BatchModifyOrderItem struct {
+	Symbol            string `json:"symbol"`
+	OrderId           string `json:"orderId,omitempty"`
+	OrigClientOrderId string `json:"origClientOrderId,omitempty"`
+	Quantity          string `json:"quantity"`
+	Price             string `json:"price"`
+}
+
+// ModifyMultipleOrdersService -- PUT /fapi/v3/batchOrders (TRADE)
+//
+// Modifies up to 5 orders in one call (10 for market-maker whitelisted
+// accounts). Per-order rules match ModifyOrderService: LIMIT orders only, and
+// at most 10000 modifications per individual order.
+//
+// Orders are processed concurrently and independently -- there is no atomic
+// guarantee, so one entry failing leaves the others untouched -- but the
+// response list keeps the request order. Each entry is either an Order or
+// {code,msg}; inspect the raw messages to handle partial failures.
+type ModifyMultipleOrdersService struct {
+	c      *FuturesClient
+	orders []BatchModifyOrderItem
+}
+
+func (c *FuturesClient) NewModifyMultipleOrdersService() *ModifyMultipleOrdersService {
+	return &ModifyMultipleOrdersService{c: c}
+}
+
+func (s *ModifyMultipleOrdersService) SetOrders(orders []BatchModifyOrderItem) *ModifyMultipleOrdersService {
+	s.orders = orders
+	return s
+}
+
+func (s *ModifyMultipleOrdersService) Do(ctx context.Context) ([]json.RawMessage, error) {
+	data, err := json.Marshal(s.orders)
+	if err != nil {
+		return nil, err
+	}
+	req := request.Put(ctx, s.c, "/fapi/v3/batchOrders", map[string]string{
+		"batchOrders": string(data),
+	}).WithSignature()
+	resp, err := request.Do[[]json.RawMessage](req)
+	if err != nil {
+		return nil, err
+	}
+	return *resp, nil
+}
+
 // FuturesSpotTransferService -- POST /fapi/v3/asset/wallet/transfer (TRANSFER)
 type FuturesSpotTransferService struct {
 	c      *FuturesClient
