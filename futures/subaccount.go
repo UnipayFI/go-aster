@@ -212,19 +212,23 @@ const (
 
 // SubAccountTransferService -- POST /fapi/v3/subAccountTransfer (TRADE)
 //
-// Signed with the user's wallet private key. `user` is the signing account
-// address -- the master account in most scenarios, or the sub-account address
-// when a sub-account initiates the transfer itself. There is no `signer`
-// parameter: the signature is always produced with the `user` account's own
-// wallet key (see the scenario table in the V3 doc). Message body:
+// Identify the signing account with either SetUser or SetSigner -- only one is
+// needed, and the signature must be produced with the private key of whichever
+// one is passed. `user` is the signing account address: the master account in
+// most scenarios, or the sub-account address when a sub-account initiates the
+// transfer itself. `signer` is an agent wallet associated with that user; it
+// must already be registered and approved (see RegisterAndApproveAgentService)
+// before it can authorize transfers on the user's behalf.
+//
+// Message body (a field absent from the request is also absent here):
 //
 // Without fromAccountAddress:
 //
-//	toAccountAddress={...}&asset={...}&amount={...}&kindType={...}&nonce={...}&user={...}
+//	toAccountAddress={...}&asset={...}&amount={...}&kindType={...}&nonce={...}&user={...}&signer={...}
 //
 // With fromAccountAddress:
 //
-//	toAccountAddress={...}&asset={...}&amount={...}&kindType={...}&nonce={...}&user={...}&fromAccountAddress={...}
+//	toAccountAddress={...}&asset={...}&amount={...}&kindType={...}&nonce={...}&user={...}&signer={...}&fromAccountAddress={...}
 type SubAccountTransferService struct {
 	c                  *FuturesClient
 	toAccountAddress   string
@@ -233,11 +237,12 @@ type SubAccountTransferService struct {
 	kindType           SubAccountTransferKindType
 	nonce              int64
 	user               string
+	signer             string
 	fromAccountAddress string
 	signature          string
 }
 
-func (c *FuturesClient) NewSubAccountTransferService(toAddr, asset, amount string, kind SubAccountTransferKindType, user string, nonce int64, signature string) *SubAccountTransferService {
+func (c *FuturesClient) NewSubAccountTransferService(toAddr, asset, amount string, kind SubAccountTransferKindType, nonce int64, signature string) *SubAccountTransferService {
 	return &SubAccountTransferService{
 		c:                c,
 		toAccountAddress: toAddr,
@@ -245,11 +250,26 @@ func (c *FuturesClient) NewSubAccountTransferService(toAddr, asset, amount strin
 		amount:           amount,
 		kindType:         kind,
 		nonce:            nonce,
-		user:             user,
 		signature:        signature,
 	}
 }
 
+// SetUser sets the signing account's wallet address. Pass either this or
+// SetSigner.
+func (s *SubAccountTransferService) SetUser(user string) *SubAccountTransferService {
+	s.user = user
+	return s
+}
+
+// SetSigner sets the approved agent wallet authorizing the transfer on the
+// user's behalf. Pass either this or SetUser.
+func (s *SubAccountTransferService) SetSigner(signer string) *SubAccountTransferService {
+	s.signer = signer
+	return s
+}
+
+// SetFromAccountAddress sets the source wallet address. Required when the
+// source account differs from the signing account.
 func (s *SubAccountTransferService) SetFromAccountAddress(addr string) *SubAccountTransferService {
 	s.fromAccountAddress = addr
 	return s
@@ -262,8 +282,13 @@ func (s *SubAccountTransferService) Do(ctx context.Context) (*GenericCodeMsg, er
 		"amount":           s.amount,
 		"kindType":         string(s.kindType),
 		"nonce":            formatInt64(s.nonce),
-		"user":             s.user,
 		"signature":        s.signature,
+	}
+	if s.user != "" {
+		params["user"] = s.user
+	}
+	if s.signer != "" {
+		params["signer"] = s.signer
 	}
 	if s.fromAccountAddress != "" {
 		params["fromAccountAddress"] = s.fromAccountAddress
