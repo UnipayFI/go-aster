@@ -10,6 +10,7 @@
 package aster
 
 import (
+	"github.com/UnipayFI/go-aster/v3/chain"
 	"github.com/UnipayFI/go-aster/v3/client"
 	"github.com/UnipayFI/go-aster/v3/futures"
 	"github.com/UnipayFI/go-aster/v3/spot"
@@ -35,4 +36,12 @@ func NewFuturesClient(options ...client.Options) *futures.FuturesClient {
 // and user-data streams.
 func NewFuturesWebSocketClient(options ...client.WebSocketOptions) *futures.FuturesWebSocketClient {
 	return futures.NewFuturesWebSocketClient(options...)
+}
+
+// NewChainClient constructs a REST client for /aster-chain/v3/* endpoints
+// (deposit addresses, withdrawals, and spot/perp wallet transfers). These are
+// served from their own host, so this client is separate from the spot and
+// futures ones.
+func NewChainClient(options ...client.Options) *chain.ChainClient {
+	return chain.NewChainClient(options...)
 }

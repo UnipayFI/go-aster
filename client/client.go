@@ -14,19 +14,23 @@ import (
 	"github.com/go-resty/resty/v2"
 )
 
-// Product distinguishes the spot and futures REST endpoints. It is supplied by
-// the spot/futures package wrappers; end users do not pass this directly.
+// Product distinguishes the spot, futures and Aster-Chain REST endpoints. It
+// is supplied by the spot/futures/chain package wrappers; end users do not
+// pass this directly.
 type Product int
 
 const (
 	ProductSpot Product = iota
 	ProductFutures
+	ProductChain
 )
 
 func restBaseURL(product Product, n asterCommon.Network) string {
 	switch product {
 	case ProductFutures:
 		return n.FuturesBaseURL()
+	case ProductChain:
+		return n.ChainBaseURL()
 	default:
 		return n.SpotBaseURL()
 	}

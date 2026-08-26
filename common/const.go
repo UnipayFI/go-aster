@@ -10,6 +10,7 @@ const (
 	DEFAULT_FUTURES_BASE_URL_MAINNET           = "https://fapi.asterdex.com"
 	DEFAULT_SPOT_WEBSOCKET_BASE_URL_MAINNET    = "wss://sstream.asterdex.com"
 	DEFAULT_FUTURES_WEBSOCKET_BASE_URL_MAINNET = "wss://fstream.asterdex.com"
+	DEFAULT_CHAIN_BASE_URL                     = "https://chainapi.asterdex.com"
 
 	// Testnet endpoints.
 	DEFAULT_SPOT_BASE_URL_TESTNET              = "https://sapi.asterdex-testnet.com"
@@ -71,6 +72,13 @@ func (n Network) SpotWebSocketBaseURL() string {
 		return DEFAULT_SPOT_WEBSOCKET_BASE_URL_TESTNET
 	}
 	return DEFAULT_SPOT_WEBSOCKET_BASE_URL_MAINNET
+}
+
+// ChainBaseURL returns the Aster-Chain REST base URL. The docs publish a
+// single host with no testnet counterpart, so both networks resolve to it;
+// override with client.WithBaseURL if that changes.
+func (Network) ChainBaseURL() string {
+	return DEFAULT_CHAIN_BASE_URL
 }
 
 // FuturesWebSocketBaseURL returns the futures WebSocket base URL for this network.
