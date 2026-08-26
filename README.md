@@ -8,16 +8,17 @@ Go SDK for the [Aster DEX](https://www.asterdex.com) **V3** API (Spot + Futures,
 
 > Aster V3 replaces the legacy HMAC-SHA256 auth with an **API-wallet model** based on EIP-712 typed data and ECDSA signatures. The legacy V1 API stopped issuing new keys on 2026-03-25; existing keys still work, but ongoing development happens here on V3. If you need V1, switch to the `V1(Legacy)` branch.
 
-| API                                              | Aligned to                                                                                          |
-| ------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
-| Spot + Futures V3 REST + WebSocket (public / private) | [2026-8-17](https://asterdex.github.io/aster-api-website/changelog/upcoming-changes/) |
+| API                                                        | Aligned to                                                                             |
+| ---------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| Spot + Futures + Aster-Chain V3 REST + WebSocket (public / private) | [2026-8-26](https://asterdex.github.io/aster-api-website/changelog/upcoming-changes/) |
 
 ---
 
 ## Features
 
 - ✅ **Spot REST**: 30 endpoints — market data, orders, account, transfers, withdrawals, Spot Builder (Aster Code)
-- ✅ **Futures REST**: ~60 endpoints — market, trading (incl. chase, strategy & guarded-cancel orders), position, account, STP, MMP, sub-accounts, asset migration, agent registration & approval, builder queries, announcements
+- ✅ **Futures REST**: ~60 endpoints — market, trading (incl. chase, strategy, batch-modify & guarded-cancel orders), position, account, STP, MMP, sub-accounts, asset migration, agent registration & approval, builder queries, announcements
+- ✅ **Aster-Chain REST**: 10 endpoints — deposit addresses, EVM & Solana withdrawals, spot/perp wallet transfers, withdrawal limits & fee estimates
 - ✅ **WebSocket Streaming**: full Spot & Futures market streams plus user data streams
 - ✅ **Sub-account Flows**: bind / create / update / transfer with master + child signature inputs
 - ✅ **Flexible Signer**: pluggable `SignFn` for HSM, TEE, or remote signing
@@ -86,6 +87,7 @@ aster.NewSpotClient(...)              // /api/v3/* REST
 aster.NewSpotWebSocketClient(...)     // wss://sstream.asterdex.com
 aster.NewFuturesClient(...)           // /fapi/v3/* REST
 aster.NewFuturesWebSocketClient(...)  // wss://fstream.asterdex.com
+aster.NewChainClient(...)             // /aster-chain/v3/* REST (chainapi.asterdex.com)
 ```
 
 ### 4. Configuration options
@@ -205,6 +207,8 @@ c.NewBindSubAccountService(childAddr, name, user, nonce, childSig, sig).
     Do(ctx)
 ```
 
+`Transfer` additionally accepts an approved **agent wallet**: pass either `SetUser(masterOrSubAddress)` or `SetSigner(agentAddress)` to identify the signing account, and sign with that account's own key.
+
 `request.SignEIP712V3(privateKeyHex, msg, chainID)` and `request.EIP712Digest(msg, chainID)` are exposed for callers that need to interact with these flows or implement their own signers.
 
 ### Signing internals
@@ -240,12 +244,21 @@ See `request/sign.go` for the implementation and `request/sign_test.go` for the 
 
 - **General**: `Ping`, `Time`, `Noop`
 - **Market data**: `ExchangeInfo`, `Depth`, `Trades`, `HistoricalTrades`, `AggTrades`, `Klines`, `IndexPriceKlines`, `MarkPriceKlines`, `PremiumIndex`, `FundingRate`, `FundingInfo`, `24hTicker`, `TickerPrice`, `BookTicker`, `IndexReferences`
-- **Trading**: `PlaceOrder`, `ModifyOrder`, `BatchOrders`, `FuturesSpotTransfer`, `GetOrder`, `CancelOrder`, `CancelAllOpenOrders`, `CancelMultipleOrders`, `CountdownCancelAll`, `GetOpenOrder`, `GetOpenOrders`, `GetAllOrders`
+- **Trading**: `PlaceOrder`, `ModifyOrder`, `ModifyMultipleOrders`, `BatchOrders`, `FuturesSpotTransfer`, `GetOrder`, `CancelOrder`, `CancelAllOpenOrders`, `CancelMultipleOrders`, `CountdownCancelAll`, `GetOpenOrder`, `GetOpenOrders`, `GetAllOrders`
 - **Position config**: `ChangePositionMode`, `GetPositionMode`, `ChangeMultiAssetsMode`, `GetMultiAssetsMode`, `ChangeLeverage`, `ChangeMarginType`, `ModifyIsolatedPositionMargin`, `GetPositionMarginHistory`, `PositionRisk`, `ADLQuantile`, `ForceOrders`
 - **Account**: `Balance`, `Account`, `UserTrades`, `IncomeHistory`, `LeverageBracket`, `CommissionRate`
 - **MMP**: `UpdateMMP`, `GetMMP`, `DeleteMMP`, `ResetMMP`
 - **Sub-accounts**: `Bind`, `Create`, `GetList`, `Update`, `Transfer`
 - **Agent / Builder**: `RegisterAndApproveAgent`, `ApproveAgent`, `GetBuilderUserTrades`, `GetBuilderApprovedUserList`
+
+</details>
+
+<details>
+<summary><b>Aster-Chain REST (10)</b></summary>
+
+- **Deposit**: `GetSpotDepositAddress`
+- **Withdraw**: `PerpWithdraw`, `PerpSolanaWithdraw`, `SpotWithdraw`, `SpotSolanaWithdraw`, `GetPerpWithdrawInfo`, `GetDepositWithdrawHistory`, `EstimateWithdrawFee`
+- **Transfer**: `PerpWalletTransfer`, `SpotWalletTransfer`
 
 </details>
 
