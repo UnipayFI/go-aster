@@ -2,9 +2,12 @@ package futures
 
 import (
 	"context"
+	"encoding/json/v2"
+	"errors"
 	"strconv"
 	"time"
 
+	"github.com/UnipayFI/go-aster/v3/common"
 	"github.com/UnipayFI/go-aster/v3/request"
 	"github.com/shopspring/decimal"
 )
@@ -203,11 +206,36 @@ func (s *GetIncomeHistoryService) SetLimit(limit int) *GetIncomeHistoryService {
 
 func (s *GetIncomeHistoryService) Do(ctx context.Context) ([]IncomeRecord, error) {
 	req := request.Get(ctx, s.c, "/fapi/v3/income", s.params).WithSignature()
-	resp, err := request.Do[[]IncomeRecord](req)
-	if err != nil {
-		return nil, err
+	return request.DoDecode(req, decodeIncomeRecords)
+}
+
+// decodeIncomeRecords decodes an income page whose tranIds are JSON numbers
+// or, as the docs show them, quoted numbers; this private endpoint cannot be
+// checked live.
+func decodeIncomeRecords(body []byte) ([]IncomeRecord, error) {
+	var records []IncomeRecord
+	err := common.JSONUnmarshal(body, &records)
+	if err == nil {
+		return records, nil
 	}
-	return *resp, nil
+	var quoted []incomeRecordQuoted
+	qerr := common.JSONUnmarshal(body, &quoted)
+	if qerr == nil {
+		records = make([]IncomeRecord, len(quoted))
+		for i, r := range quoted {
+			records[i] = IncomeRecord(r)
+		}
+		return records, nil
+	}
+	// A string at .../tranId means the page quotes tranId, so the error that
+	// matters is the one from decoding it that way, unless that decode gave
+	// up earlier (a page mixing both forms).
+	var serr, qserr *json.SemanticError
+	if errors.As(err, &serr) && serr.JSONKind == '"' && serr.JSONPointer.LastToken() == "tranId" &&
+		errors.As(qerr, &qserr) && qserr.ByteOffset >= serr.ByteOffset {
+		return nil, qerr
+	}
+	return nil, err
 }
 
 type IncomeRecord struct {
@@ -218,6 +246,19 @@ type IncomeRecord struct {
 	Info       string          `json:"info"`
 	Time       time.Time       `json:"time,format:unixmilli"`
 	TranID     int64           `json:"tranId"`
+	TradeID    string          `json:"tradeId"`
+}
+
+// incomeRecordQuoted is IncomeRecord with tranId quoted, as the docs show it.
+// It must keep IncomeRecord's fields so the two stay convertible.
+type incomeRecordQuoted struct {
+	Symbol     string          `json:"symbol"`
+	IncomeType IncomeType      `json:"incomeType"`
+	Income     decimal.Decimal `json:"income"`
+	Asset      string          `json:"asset"`
+	Info       string          `json:"info"`
+	Time       time.Time       `json:"time,format:unixmilli"`
+	TranID     int64           `json:"tranId,string"`
 	TradeID    string          `json:"tradeId"`
 }
 
