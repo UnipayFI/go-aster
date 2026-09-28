@@ -6,7 +6,6 @@ import (
 
 	"github.com/UnipayFI/go-aster/v3/common"
 	"github.com/UnipayFI/go-aster/v3/request"
-	"github.com/go-json-experiment/json"
 	"github.com/shopspring/decimal"
 )
 
@@ -91,7 +90,7 @@ func decodeUserDataEvent(msg []byte) (*WsUserDataEvent, error) {
 	var head struct {
 		EventType string `json:"e"`
 	}
-	if err := json.Unmarshal(msg, &head); err != nil {
+	if err := common.JSONUnmarshal(msg, &head); err != nil {
 		return nil, err
 	}
 	ev := &WsUserDataEvent{
@@ -101,21 +100,21 @@ func decodeUserDataEvent(msg []byte) (*WsUserDataEvent, error) {
 	switch head.EventType {
 	case "outboundAccountPosition":
 		var x WsAccountUpdateEvent
-		if err := json.Unmarshal(msg, &x); err != nil {
+		if err := common.JSONUnmarshal(msg, &x); err != nil {
 			return ev, err
 		}
 		ev.AccountUpdate = &x
 		ev.EventTime = x.EventTime
 	case "executionReport":
 		var x WsExecutionReportEvent
-		if err := json.Unmarshal(msg, &x); err != nil {
+		if err := common.JSONUnmarshal(msg, &x); err != nil {
 			return ev, err
 		}
 		ev.ExecutionReport = &x
 		ev.EventTime = x.EventTime
 	case "tradepro":
 		var x WsTradeProEvent
-		if err := json.Unmarshal(msg, &x); err != nil {
+		if err := common.JSONUnmarshal(msg, &x); err != nil {
 			return ev, err
 		}
 		ev.TradePro = &x

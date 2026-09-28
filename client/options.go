@@ -12,7 +12,6 @@ import (
 
 	asterCommon "github.com/UnipayFI/go-aster/v3/common"
 	"github.com/UnipayFI/go-aster/v3/pkg/log"
-	"github.com/go-json-experiment/json"
 	"github.com/go-resty/resty/v2"
 	"github.com/gorilla/websocket"
 	"golang.org/x/net/proxy"
@@ -48,12 +47,8 @@ func defaultOption() *Option {
 
 func defaultHttpClient() *resty.Client {
 	return resty.New().
-		SetJSONMarshaler(func(v any) ([]byte, error) {
-			return json.Marshal(v)
-		}).
-		SetJSONUnmarshaler(func(data []byte, v any) error {
-			return json.Unmarshal(data, v)
-		})
+		SetJSONMarshaler(asterCommon.JSONMarshal).
+		SetJSONUnmarshaler(asterCommon.JSONUnmarshal)
 }
 
 // WithNetwork selects the Aster network. The REST base URL and the EIP-712
