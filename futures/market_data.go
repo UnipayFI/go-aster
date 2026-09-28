@@ -356,13 +356,13 @@ func parseKline(row []any) (Kline, error) {
 		return Kline{}, err
 	}
 	return Kline{
-		OpenTime:                 time.UnixMilli(openMs),
+		OpenTime:                 time.UnixMilli(openMs).UTC(),
 		Open:                     open,
 		High:                     high,
 		Low:                      low,
 		Close:                    cl,
 		Volume:                   vol,
-		CloseTime:                time.UnixMilli(closeMs),
+		CloseTime:                time.UnixMilli(closeMs).UTC(),
 		QuoteAssetVolume:         quoteVol,
 		NumberOfTrades:           numTrades,
 		TakerBuyBaseAssetVolume:  takerBase,

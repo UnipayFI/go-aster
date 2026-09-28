@@ -247,9 +247,9 @@ type DepositWithdrawRecord struct {
 	AccountType string          `json:"accountType"`
 }
 
-// TimeAt returns Time as a time.Time.
+// TimeAt returns Time as a time.Time in UTC.
 func (r DepositWithdrawRecord) TimeAt() time.Time {
-	return time.UnixMilli(r.Time)
+	return time.UnixMilli(r.Time).UTC()
 }
 
 // EstimateWithdrawFeeService -- GET /aster-chain/v3/withdraw/estimateFee (NONE)

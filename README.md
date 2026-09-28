@@ -227,7 +227,7 @@ See `request/sign.go` for the implementation and `request/sign_test.go` for the 
 
 ### JSON and timestamps
 
-The SDK uses Go 1.27's `encoding/json/v2` (keep the default `jsonv2` GOEXPERIMENT enabled; without it the SDK does not compile). Aster sends timestamps as bare JSON numbers, and every `time.Time` field declares the unit it arrives in with the `format` tag option, e.g. `json:"updateTime,format:unixmilli"` — experimental in Go 1.27, and enabled by the SDK's codec, `common.JSONMarshal` / `common.JSONUnmarshal`, which the REST client and the WebSocket streams use. Decoded times are in UTC — use `.Equal` to compare and `.In(loc)` / `.Local()` to display.
+The SDK uses Go 1.27's `encoding/json/v2` (keep the default `jsonv2` GOEXPERIMENT enabled; without it the SDK does not compile). Aster sends timestamps as bare JSON numbers, and every `time.Time` field declares the unit it arrives in with the `format` tag option, e.g. `json:"updateTime,format:unixmilli"` — experimental in Go 1.27, and enabled by the SDK's codec, `common.JSONMarshal` / `common.JSONUnmarshal`, which the REST client and the WebSocket streams use. Decoded times are in UTC — use `.Equal` to compare and `.In(loc)` / `.Local()` to display; `Kline.OpenTime` / `CloseTime` and `DepositWithdrawRecord.TimeAt()` are UTC too.
 
 An explicit `0` on the wire decodes as the Unix epoch (`1970-01-01T00:00:00Z`), not as the zero `time.Time`. A `time.Time` without a `format` option is RFC 3339, as in the standard library.
 
