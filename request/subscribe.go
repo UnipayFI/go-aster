@@ -2,6 +2,7 @@ package request
 
 import (
 	"context"
+	"sync/atomic"
 	"time"
 
 	"github.com/UnipayFI/go-aster/v3/common"
@@ -16,6 +17,12 @@ type WebSocketClient interface {
 	GetDialer() *websocket.Dialer
 }
 
+// Subscribe dials endpoint and decodes each frame into T for callback. Close
+// (or send on) done to end the subscription; stop is closed once reading has
+// ended, whether because done was closed or because a read failed, in which
+// case callback gets the error first. Frames already read may still reach
+// callback after done is closed, so wait on stop before releasing what
+// callback uses.
 func Subscribe[T any](ctx context.Context, client WebSocketClient, endpoint string, callback func(message *T, err error)) (done chan<- struct{}, stop <-chan struct{}, err error) {
 	return subscribeBytes(ctx, client, endpoint, func(message []byte, e error) {
 		if e != nil {
@@ -48,25 +55,30 @@ func subscribeBytes(ctx context.Context, client WebSocketClient, endpoint string
 		return nil, nil, err
 	}
 	conn.SetReadLimit(655350)
-	doneC := make(chan struct{})
+	// doneC is buffered so a caller that sends on done instead of closing it
+	// does not block once the connection has already ended.
+	doneC := make(chan struct{}, 1)
 	stopC := make(chan struct{})
 
 	go keepAlive(conn, common.DEFAULT_KEEP_ALIVE_TIMEOUT, common.DEFAULT_KEEP_ALIVE_INTERVAL)
 
-	silent := false
+	// closing marks a caller-initiated close, whose read error is expected
+	// and not reported.
+	var closing atomic.Bool
 	go func() {
 		select {
-		case <-stopC:
-			silent = true
 		case <-doneC:
+			closing.Store(true)
+		case <-stopC:
 		}
 		conn.Close()
 	}()
 	go func() {
+		defer close(stopC)
 		for {
 			_, message, err := conn.ReadMessage()
 			if err != nil {
-				if !silent {
+				if !closing.Load() {
 					callback(nil, err)
 				}
 				return
