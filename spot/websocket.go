@@ -276,14 +276,14 @@ type WsPartialDepthEvent struct {
 	FirstUpdateID   int64       `json:"U"`
 	FinalUpdateID   int64       `json:"u"`
 	PrevFinalID     int64       `json:"pu"`
-	Bids            [][2]string `json:"bids"`
-	Asks            [][2]string `json:"asks"`
+	Bids            [][2]string `json:"b"`
+	Asks            [][2]string `json:"a"`
 }
 
 // SubscribeDiffDepthService -- <symbol>@depth or <symbol>@depth@100ms
 //
-// Note the payload uses "b"/"a" (lowercase short form) for diff updates,
-// distinct from PartialDepth's "bids"/"asks".
+// The payload has the same shape as partial depth: levels arrive as "b"/"a".
+// (The docs show "bids"/"asks" for partial depth, but the stream sends "b"/"a".)
 type SubscribeDiffDepthService struct {
 	c      *SpotWebSocketClient
 	symbol string

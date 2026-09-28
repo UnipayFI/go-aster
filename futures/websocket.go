@@ -359,8 +359,8 @@ func (s *SubscribePartialDepthService) Do(ctx context.Context, cb func(*WsDepthE
 
 // SubscribeDiffDepthService -- <symbol>@depth[@500ms|@100ms]
 //
-// Diff streams use the same payload shape as partial depth on V3 futures
-// (b/a lowercase), unlike the V3 spot diff/partial split.
+// Diff streams use the same payload shape as partial depth (b/a lowercase),
+// as on spot.
 type SubscribeDiffDepthService struct {
 	c      *FuturesWebSocketClient
 	symbol string
