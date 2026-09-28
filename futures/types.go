@@ -160,6 +160,7 @@ const (
 	StrategyOTO   StrategyType = "OTO"
 	StrategyOCO   StrategyType = "OCO"
 	StrategyOTOCO StrategyType = "OTOCO"
+	StrategyChase StrategyType = "CHASE" // reported for chase orders (POST /fapi/v3/chase)
 )
 
 // SecurityType tags a strategy sub-order's product.

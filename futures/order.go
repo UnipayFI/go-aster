@@ -258,10 +258,15 @@ func (s *PlaceChaseOrderService) Do(ctx context.Context) (*ChaseOrder, error) {
 	return request.Do[ChaseOrder](req)
 }
 
-// ChaseOrder is the response shape for a placed chase strategy order.
+// ChaseOrder is the response to a placed chase strategy order. The docs show
+// the order parameters echoed back, but the live endpoint answers with the
+// strategy result only: strategyId, clientStrategyId, strategyType,
+// strategyStatus, updateTime, failureCode and failureReason. The other fields
+// stay empty unless Aster starts sending them.
 type ChaseOrder struct {
 	StrategyId         int64           `json:"strategyId"`
 	ClientStrategyId   string          `json:"clientStrategyId"`
+	StrategyType       StrategyType    `json:"strategyType"`
 	Symbol             string          `json:"symbol"`
 	Side               OrderSide       `json:"side"`
 	PositionSide       PositionSide    `json:"positionSide"`
@@ -276,6 +281,8 @@ type ChaseOrder struct {
 	StrategyStatus     string          `json:"strategyStatus"`
 	BookTime           *time.Time      `json:"bookTime,format:unixmilli"` // nil when the response omits it
 	UpdateTime         time.Time       `json:"updateTime,format:unixmilli"`
+	FailureCode        int             `json:"failureCode"`
+	FailureReason      string          `json:"failureReason"`
 }
 
 // BatchOrderItem mirrors the per-order parameters accepted in batchOrders.
