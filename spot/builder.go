@@ -37,7 +37,7 @@ import (
 // STRING without enumerating accepted values, so it is passed through as-is.
 //
 // All three management endpoints answer with HTTP 200 and a zero-byte body,
-// so Do reports only an error.
+// so Do reports only an error and the body is not decoded.
 
 // ApproveBuilderService -- POST /api/v3/approveBuilder (SPOT_TRADE)
 //
@@ -92,7 +92,7 @@ func (s *ApproveBuilderService) Do(ctx context.Context) error {
 		params["builderName"] = s.builderName
 	}
 	req := request.Post(s.c, ctx, "/api/v3/approveBuilder", params)
-	_, err := request.Do[struct{}](req)
+	_, err := request.DoRaw(req)
 	return err
 }
 
@@ -135,7 +135,7 @@ func (s *UpdateBuilderService) Do(ctx context.Context) error {
 		"signatureChainId": strconv.FormatInt(s.signatureChainId, 10),
 		"signature":        s.signature,
 	})
-	_, err := request.Do[struct{}](req)
+	_, err := request.DoRaw(req)
 	return err
 }
 
@@ -175,7 +175,7 @@ func (s *DelBuilderService) Do(ctx context.Context) error {
 		"signatureChainId": strconv.FormatInt(s.signatureChainId, 10),
 		"signature":        s.signature,
 	})
-	_, err := request.Do[struct{}](req)
+	_, err := request.DoRaw(req)
 	return err
 }
 

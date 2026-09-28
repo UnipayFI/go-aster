@@ -85,3 +85,40 @@ func assertCovers(t *testing.T, got url.Values, want map[string]string) {
 		}
 	}
 }
+
+// TestBuilderManagementZeroByteBody checks that approve/update/delBuilder
+// succeed on the documented HTTP 200 with a zero-byte body, whatever the
+// Content-Type, and still surface API errors.
+func TestBuilderManagementZeroByteBody(t *testing.T) {
+	for _, tt := range []struct {
+		contentType string
+		status      int
+		body        string
+		wantErr     bool
+	}{
+		{status: http.StatusOK},
+		{contentType: "application/json", status: http.StatusOK},
+		{contentType: "application/json", status: http.StatusBadRequest, body: `{"code":-1022,"msg":"Signature check failed"}`, wantErr: true},
+	} {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if tt.contentType != "" {
+				w.Header().Set("Content-Type", tt.contentType)
+			}
+			w.WriteHeader(tt.status)
+			_, _ = w.Write([]byte(tt.body))
+		}))
+		c := NewSpotClient(client.WithBaseURL(srv.URL))
+		ctx := context.Background()
+		errs := []error{
+			c.NewApproveBuilderService("0xb", "0.0001", "Mainnet", testUserAddress, 1, 1666, "0xsig").Do(ctx),
+			c.NewUpdateBuilderService("0xb", "0.0001", "Mainnet", testUserAddress, 1, 1666, "0xsig").Do(ctx),
+			c.NewDelBuilderService("0xb", "Mainnet", testUserAddress, 1, 1666, "0xsig").Do(ctx),
+		}
+		srv.Close()
+		for i, err := range errs {
+			if (err != nil) != tt.wantErr {
+				t.Errorf("content type %q, status %d, call %d: err = %v, wantErr %v", tt.contentType, tt.status, i, err, tt.wantErr)
+			}
+		}
+	}
+}
