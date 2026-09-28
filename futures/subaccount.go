@@ -1,8 +1,10 @@
 package futures
 
 import (
+	"bytes"
 	"context"
 
+	"github.com/UnipayFI/go-aster/v3/common"
 	"github.com/UnipayFI/go-aster/v3/request"
 	"github.com/shopspring/decimal"
 )
@@ -325,11 +327,21 @@ func (s *MigrateUserAssetsService) Do(ctx context.Context) (*MigrateUserAssetsRe
 		"nonce":     formatInt64(s.nonce),
 		"signature": s.signature,
 	})
-	return request.Do[MigrateUserAssetsResponse](req)
+	return request.DoDecode(req, func(body []byte) (*MigrateUserAssetsResponse, error) {
+		var resp MigrateUserAssetsResponse
+		if len(bytes.TrimSpace(body)) == 0 {
+			return &resp, nil
+		}
+		if err := common.JSONUnmarshal(body, &resp); err != nil {
+			return nil, err
+		}
+		return &resp, nil
+	})
 }
 
 // MigrateUserAssetsResponse carries the batchId used to query migration status.
-// batchId is empty when the source account had no positive-balance assets.
+// batchId is empty when the source account had no positive-balance assets, for
+// which the docs say Aster returns an empty response.
 type MigrateUserAssetsResponse struct {
 	BatchID string `json:"batchId"`
 }
