@@ -315,12 +315,12 @@ func (s *GetTransactionHistoryService) Do(ctx context.Context) ([]TransactionRec
 }
 
 type TransactionRecord struct {
-	TranId        int64           `json:"tranId"`
-	TradeId       *int64          `json:"tradeId"`
-	Asset         string          `json:"asset"`
-	Symbol        string          `json:"symbol"`
-	BalanceDelta  decimal.Decimal `json:"balanceDelta"`
-	BalanceInfo   string          `json:"balanceInfo"`
-	Time          time.Time       `json:"time,format:unixmilli"`
-	Type          TransactionType `json:"type"`
+	TranId       int64           `json:"tranId"`
+	TradeId      *int64          `json:"tradeId"`
+	Asset        string          `json:"asset"`
+	Symbol       string          `json:"symbol"`
+	BalanceDelta decimal.Decimal `json:"balanceDelta"`
+	BalanceInfo  string          `json:"balanceInfo"`
+	Time         time.Time       `json:"time,format:unixmilli"`
+	Type         TransactionType `json:"type"`
 }

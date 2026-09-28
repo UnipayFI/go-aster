@@ -12,12 +12,12 @@ const (
 type OrderType string
 
 const (
-	OrderTypeLimit             OrderType = "LIMIT"
-	OrderTypeMarket            OrderType = "MARKET"
-	OrderTypeStop              OrderType = "STOP"
-	OrderTypeStopMarket        OrderType = "STOP_MARKET"
-	OrderTypeTakeProfit        OrderType = "TAKE_PROFIT"
-	OrderTypeTakeProfitMarket  OrderType = "TAKE_PROFIT_MARKET"
+	OrderTypeLimit            OrderType = "LIMIT"
+	OrderTypeMarket           OrderType = "MARKET"
+	OrderTypeStop             OrderType = "STOP"
+	OrderTypeStopMarket       OrderType = "STOP_MARKET"
+	OrderTypeTakeProfit       OrderType = "TAKE_PROFIT"
+	OrderTypeTakeProfitMarket OrderType = "TAKE_PROFIT_MARKET"
 )
 
 // OrderStatus from the matching engine.

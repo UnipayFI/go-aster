@@ -57,23 +57,23 @@ func (s *GetAccountService) Do(ctx context.Context) (*AccountInfo, error) {
 }
 
 type AccountInfo struct {
-	FeeTier                     int             `json:"feeTier"`
-	CanTrade                    bool            `json:"canTrade"`
-	CanDeposit                  bool            `json:"canDeposit"`
-	CanWithdraw                 bool            `json:"canWithdraw"`
-	UpdateTime                  int64           `json:"updateTime"`
-	TotalInitialMargin          decimal.Decimal `json:"totalInitialMargin"`
-	TotalMaintMargin            decimal.Decimal `json:"totalMaintMargin"`
-	TotalWalletBalance          decimal.Decimal `json:"totalWalletBalance"`
-	TotalUnrealizedProfit       decimal.Decimal `json:"totalUnrealizedProfit"`
-	TotalMarginBalance          decimal.Decimal `json:"totalMarginBalance"`
-	TotalPositionInitialMargin  decimal.Decimal `json:"totalPositionInitialMargin"`
-	TotalOpenOrderInitialMargin decimal.Decimal `json:"totalOpenOrderInitialMargin"`
-	TotalCrossWalletBalance     decimal.Decimal `json:"totalCrossWalletBalance"`
-	TotalCrossUnPnl             decimal.Decimal `json:"totalCrossUnPnl"`
-	AvailableBalance            decimal.Decimal `json:"availableBalance"`
-	MaxWithdrawAmount           decimal.Decimal `json:"maxWithdrawAmount"`
-	Assets                      []AccountAsset  `json:"assets"`
+	FeeTier                     int               `json:"feeTier"`
+	CanTrade                    bool              `json:"canTrade"`
+	CanDeposit                  bool              `json:"canDeposit"`
+	CanWithdraw                 bool              `json:"canWithdraw"`
+	UpdateTime                  int64             `json:"updateTime"`
+	TotalInitialMargin          decimal.Decimal   `json:"totalInitialMargin"`
+	TotalMaintMargin            decimal.Decimal   `json:"totalMaintMargin"`
+	TotalWalletBalance          decimal.Decimal   `json:"totalWalletBalance"`
+	TotalUnrealizedProfit       decimal.Decimal   `json:"totalUnrealizedProfit"`
+	TotalMarginBalance          decimal.Decimal   `json:"totalMarginBalance"`
+	TotalPositionInitialMargin  decimal.Decimal   `json:"totalPositionInitialMargin"`
+	TotalOpenOrderInitialMargin decimal.Decimal   `json:"totalOpenOrderInitialMargin"`
+	TotalCrossWalletBalance     decimal.Decimal   `json:"totalCrossWalletBalance"`
+	TotalCrossUnPnl             decimal.Decimal   `json:"totalCrossUnPnl"`
+	AvailableBalance            decimal.Decimal   `json:"availableBalance"`
+	MaxWithdrawAmount           decimal.Decimal   `json:"maxWithdrawAmount"`
+	Assets                      []AccountAsset    `json:"assets"`
 	Positions                   []AccountPosition `json:"positions"`
 }
 

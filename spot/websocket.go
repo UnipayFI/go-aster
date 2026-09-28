@@ -89,10 +89,10 @@ func (s *SubscribeKlineService) Do(ctx context.Context, cb func(*WsKlineEvent, e
 }
 
 type WsKlineEvent struct {
-	EventType string  `json:"e"`
+	EventType string    `json:"e"`
 	EventTime time.Time `json:"E,format:unixmilli"`
-	Symbol    string  `json:"s"`
-	Kline     WsKline `json:"k"`
+	Symbol    string    `json:"s"`
+	Kline     WsKline   `json:"k"`
 }
 
 type WsKline struct {

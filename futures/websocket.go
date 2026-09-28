@@ -304,17 +304,17 @@ type WsForceOrderEvent struct {
 }
 
 type WsForceOrderRO struct {
-	Symbol            string          `json:"s"`
-	Side              OrderSide       `json:"S"`
-	OrderType         OrderType       `json:"o"`
-	TimeInForce       TimeInForce     `json:"f"`
-	OrigQty           decimal.Decimal `json:"q"`
-	Price             decimal.Decimal `json:"p"`
-	AvgPrice          decimal.Decimal `json:"ap"`
-	Status            OrderStatus     `json:"X"`
-	LastFilledQty     decimal.Decimal `json:"l"`
-	AccumFilledQty    decimal.Decimal `json:"z"`
-	OrderTradeTime    time.Time       `json:"T,format:unixmilli"`
+	Symbol         string          `json:"s"`
+	Side           OrderSide       `json:"S"`
+	OrderType      OrderType       `json:"o"`
+	TimeInForce    TimeInForce     `json:"f"`
+	OrigQty        decimal.Decimal `json:"q"`
+	Price          decimal.Decimal `json:"p"`
+	AvgPrice       decimal.Decimal `json:"ap"`
+	Status         OrderStatus     `json:"X"`
+	LastFilledQty  decimal.Decimal `json:"l"`
+	AccumFilledQty decimal.Decimal `json:"z"`
+	OrderTradeTime time.Time       `json:"T,format:unixmilli"`
 }
 
 // SubscribeAllForceOrdersService -- !forceOrder@arr
