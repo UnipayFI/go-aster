@@ -66,7 +66,7 @@ type FuturesSymbol struct {
 	SettlePlan            int              `json:"settlePlan"`
 	TriggerProtect        decimal.Decimal  `json:"triggerProtect"`
 	Filters               []map[string]any `json:"filters"`
-	OrderTypes            []OrderType      `json:"OrderType"`
+	OrderTypes            []OrderType      `json:"orderTypes"`
 	TimeInForce           []TimeInForce    `json:"timeInForce"`
 	LiquidationFee        decimal.Decimal  `json:"liquidationFee"`
 	MarketTakeBound       decimal.Decimal  `json:"marketTakeBound"`
