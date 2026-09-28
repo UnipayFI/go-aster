@@ -28,7 +28,7 @@ type OrderResponse struct {
 	OrigType      OrderType       `json:"origType"`
 	Type          OrderType       `json:"type"`
 	Side          OrderSide       `json:"side"`
-	Time          time.Time       `json:"time,format:unixmilli"`
+	Time          *time.Time      `json:"time,format:unixmilli"` // nil in place and cancel responses
 	UpdateTime    time.Time       `json:"updateTime,format:unixmilli"`
 }
 

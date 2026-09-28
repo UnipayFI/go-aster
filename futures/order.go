@@ -36,7 +36,7 @@ type Order struct {
 	PriceProtect  bool            `json:"priceProtect"`
 	ActivatePrice decimal.Decimal `json:"activatePrice"`
 	PriceRate     decimal.Decimal `json:"priceRate"`
-	Time          time.Time       `json:"time,format:unixmilli"`
+	Time          *time.Time      `json:"time,format:unixmilli"` // nil in place, modify and cancel responses
 	UpdateTime    time.Time       `json:"updateTime,format:unixmilli"`
 }
 
@@ -274,7 +274,7 @@ type ChaseOrder struct {
 	MaxChaseOffsetType OffsetType      `json:"maxChaseOffsetType"`
 	TimeInForce        TimeInForce     `json:"timeInForce"`
 	StrategyStatus     string          `json:"strategyStatus"`
-	BookTime           time.Time       `json:"bookTime,format:unixmilli"`
+	BookTime           *time.Time      `json:"bookTime,format:unixmilli"` // nil when the response omits it
 	UpdateTime         time.Time       `json:"updateTime,format:unixmilli"`
 }
 

@@ -399,8 +399,8 @@ type Ticker24h struct {
 	LowPrice           decimal.Decimal `json:"lowPrice"`
 	Volume             decimal.Decimal `json:"volume"`
 	QuoteVolume        decimal.Decimal `json:"quoteVolume"`
-	OpenTime           time.Time       `json:"openTime,format:unixmilli"`
-	CloseTime          time.Time       `json:"closeTime,format:unixmilli"`
+	OpenTime           *time.Time      `json:"openTime,format:unixmilli"`  // nil when a per-symbol query returns {}
+	CloseTime          *time.Time      `json:"closeTime,format:unixmilli"` // nil when a per-symbol query returns {}
 	FirstId            int64           `json:"firstId"`
 	LastId             int64           `json:"lastId"`
 	Count              int64           `json:"count"`
@@ -442,7 +442,7 @@ func (s *GetTickerPriceService) Do(ctx context.Context) ([]TickerPrice, error) {
 type TickerPrice struct {
 	Symbol string          `json:"symbol"`
 	Price  decimal.Decimal `json:"price"`
-	Time   time.Time       `json:"time,format:unixmilli"`
+	Time   *time.Time      `json:"time,format:unixmilli"` // nil when a per-symbol query returns {}
 }
 
 // GetBookTickerService -- GET /api/v3/ticker/bookTicker
@@ -482,7 +482,7 @@ type BookTicker struct {
 	BidQty   decimal.Decimal `json:"bidQty"`
 	AskPrice decimal.Decimal `json:"askPrice"`
 	AskQty   decimal.Decimal `json:"askQty"`
-	Time     time.Time       `json:"time,format:unixmilli"`
+	Time     *time.Time      `json:"time,format:unixmilli"` // nil when a per-symbol query returns {}
 }
 
 // GetCommissionRateService -- GET /api/v3/commissionRate (USER_DATA)
