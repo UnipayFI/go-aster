@@ -31,9 +31,13 @@ const historyBody = `[{"id":"12345","type":"WITHDRAW","asset":"USDT","amount":"1
 	`"accountType":"perp"}]`
 
 // estimateFeeBody is the response sample from the Aster-Chain endpoints doc.
-// Note gasPrice and gasLimit arrive as JSON numbers, the rest as strings.
+// The live API differs: see liveEstimateFeeBody.
 const estimateFeeBody = `{"gasPrice":1000000000,"gasLimit":21000,"nativePrice":"1800.00",` +
 	`"tokenPrice":"1.00","gasCost":"0.000021","gasUsdValue":"0.038"}`
+
+// liveEstimateFeeBody is a live /aster-chain/v3/withdraw/estimateFee response
+// (chainId=56, USDT): no gasPrice or nativePrice, and numbers, not strings.
+const liveEstimateFeeBody = `{"gasLimit":200000,"tokenPrice":0.99961,"gasCost":0.11,"gasUsdValue":0.1}`
 
 // depositAddressBody is the response sample from the Aster-Chain endpoints doc.
 const depositAddressBody = `{"network":"SUI",` +
@@ -190,6 +194,16 @@ func TestEstimateWithdrawFeeRequest(t *testing.T) {
 	}
 	if want := "0.000021"; fee.GasCost.String() != want {
 		t.Errorf("GasCost = %s, want %s", fee.GasCost, want)
+	}
+
+	c = newTestClient(t, liveEstimateFeeBody, &gotPath, &gotQuery)
+	fee, err = c.NewEstimateWithdrawFeeService(56, "USDT").Do(context.Background())
+	if err != nil {
+		t.Fatalf("Do (live body): %v", err)
+	}
+	if fee.GasLimit != 200000 || fee.GasPrice != 0 || !fee.NativePrice.IsZero() ||
+		fee.TokenPrice.String() != "0.99961" || fee.GasCost.String() != "0.11" || fee.GasUsdValue.String() != "0.1" {
+		t.Errorf("live body decoded as %+v", fee)
 	}
 }
 

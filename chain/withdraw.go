@@ -274,8 +274,9 @@ func (s *EstimateWithdrawFeeService) Do(ctx context.Context) (*WithdrawFeeEstima
 }
 
 // WithdrawFeeEstimate breaks the fee down into its gas inputs and their fiat
-// value. GasPrice and GasLimit arrive as JSON numbers; the prices and costs
-// arrive as strings.
+// value. The docs show every field, with the prices and costs as strings; the
+// live API sends only gasLimit, tokenPrice, gasCost and gasUsdValue, all as
+// JSON numbers, so GasPrice and NativePrice stay zero.
 type WithdrawFeeEstimate struct {
 	GasPrice    int64           `json:"gasPrice"`
 	GasLimit    int64           `json:"gasLimit"`

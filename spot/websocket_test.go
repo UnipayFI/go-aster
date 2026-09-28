@@ -50,3 +50,19 @@ func TestPartialDepthEventLevels(t *testing.T) {
 		t.Errorf("decoded %+v", ev)
 	}
 }
+
+// liveBookTickerFrame is a captured sstream btcusdt@bookTicker frame; the docs
+// leave out e, E and T.
+const liveBookTickerFrame = `{"u":6652628411,"e":"bookTicker","s":"BTCUSDT","b":"83335.59",` +
+	`"B":"0.08198","a":"83336.42","A":"1.72705","T":1790610987719,"E":1790610987722}`
+
+func TestBookTickerEventTimes(t *testing.T) {
+	var ev WsBookTickerEvent
+	if err := common.JSONUnmarshal([]byte(liveBookTickerFrame), &ev); err != nil {
+		t.Fatal(err)
+	}
+	if ev.EventType != "bookTicker" || !ev.EventTime.Equal(time.UnixMilli(1790610987722)) ||
+		!ev.TransactionTime.Equal(time.UnixMilli(1790610987719)) || ev.UpdateID != 6652628411 || ev.BidPrice.String() != "83335.59" {
+		t.Errorf("decoded %+v", ev)
+	}
+}

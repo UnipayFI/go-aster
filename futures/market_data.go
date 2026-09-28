@@ -535,7 +535,7 @@ type Ticker24h struct {
 	PriceChange        decimal.Decimal `json:"priceChange"`
 	PriceChangePercent decimal.Decimal `json:"priceChangePercent"`
 	WeightedAvgPrice   decimal.Decimal `json:"weightedAvgPrice"`
-	PrevClosePrice     decimal.Decimal `json:"prevClosePrice"`
+	PrevClosePrice     decimal.Decimal `json:"prevClosePrice"` // documented, but Aster does not send it
 	LastPrice          decimal.Decimal `json:"lastPrice"`
 	LastQty            decimal.Decimal `json:"lastQty"`
 	OpenPrice          decimal.Decimal `json:"openPrice"`
@@ -619,12 +619,13 @@ func (s *GetBookTickerService) Do(ctx context.Context) ([]BookTicker, error) {
 }
 
 type BookTicker struct {
-	Symbol   string          `json:"symbol"`
-	BidPrice decimal.Decimal `json:"bidPrice"`
-	BidQty   decimal.Decimal `json:"bidQty"`
-	AskPrice decimal.Decimal `json:"askPrice"`
-	AskQty   decimal.Decimal `json:"askQty"`
-	Time     time.Time       `json:"time,format:unixmilli"`
+	LastUpdateId int64           `json:"lastUpdateId"`
+	Symbol       string          `json:"symbol"`
+	BidPrice     decimal.Decimal `json:"bidPrice"`
+	BidQty       decimal.Decimal `json:"bidQty"`
+	AskPrice     decimal.Decimal `json:"askPrice"`
+	AskQty       decimal.Decimal `json:"askQty"`
+	Time         time.Time       `json:"time,format:unixmilli"`
 }
 
 // GetIndexReferencesService -- GET /fapi/v3/indexreferences

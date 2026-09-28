@@ -2,6 +2,7 @@ package futures
 
 import (
 	"testing"
+	"time"
 
 	"github.com/UnipayFI/go-aster/v3/common"
 )
@@ -23,5 +24,19 @@ func TestFuturesSymbolOrderTypes(t *testing.T) {
 	}
 	if len(s.TimeInForce) != 4 {
 		t.Errorf("TimeInForce = %v", s.TimeInForce)
+	}
+}
+
+// liveBookTicker is a live /fapi/v3/ticker/bookTicker?symbol=BTCUSDT response.
+const liveBookTicker = `{"symbol":"BTCUSDT","bidPrice":"83303.9","bidQty":"4.797","askPrice":"83304.0",` +
+	`"askQty":"0.001","time":1790610988500,"lastUpdateId":571363136052}`
+
+func TestBookTickerLastUpdateID(t *testing.T) {
+	var b BookTicker
+	if err := common.JSONUnmarshal([]byte(liveBookTicker), &b); err != nil {
+		t.Fatal(err)
+	}
+	if b.LastUpdateId != 571363136052 || !b.Time.Equal(time.UnixMilli(1790610988500)) || b.AskPrice.String() != "83304" {
+		t.Errorf("decoded %+v", b)
 	}
 }

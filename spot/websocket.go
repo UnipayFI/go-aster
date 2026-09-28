@@ -219,13 +219,18 @@ func (s *SubscribeBookTickerService) Do(ctx context.Context, cb func(*WsBookTick
 	return request.Subscribe[WsBookTickerEvent](ctx, s.c, streamPath(s.symbol+"@bookTicker"), cb)
 }
 
+// WsBookTickerEvent is a bookTicker update. The docs omit e, E and T, but
+// every live frame carries them.
 type WsBookTickerEvent struct {
-	UpdateID int64           `json:"u"`
-	Symbol   string          `json:"s"`
-	BidPrice decimal.Decimal `json:"b"`
-	BidQty   decimal.Decimal `json:"B"`
-	AskPrice decimal.Decimal `json:"a"`
-	AskQty   decimal.Decimal `json:"A"`
+	EventType       string          `json:"e"`
+	UpdateID        int64           `json:"u"`
+	EventTime       time.Time       `json:"E,format:unixmilli"`
+	TransactionTime time.Time       `json:"T,format:unixmilli"`
+	Symbol          string          `json:"s"`
+	BidPrice        decimal.Decimal `json:"b"`
+	BidQty          decimal.Decimal `json:"B"`
+	AskPrice        decimal.Decimal `json:"a"`
+	AskQty          decimal.Decimal `json:"A"`
 }
 
 // SubscribeAllBookTickersService -- !bookTicker

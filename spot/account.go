@@ -151,6 +151,7 @@ func (s *GetWithdrawFeeService) Do(ctx context.Context) (*WithdrawFeeResponse, e
 }
 
 type WithdrawFeeResponse struct {
+	GasLimit    int64           `json:"gasLimit"`
 	TokenPrice  decimal.Decimal `json:"tokenPrice"`
 	GasCost     decimal.Decimal `json:"gasCost"`
 	GasUsdValue decimal.Decimal `json:"gasUsdValue"`
