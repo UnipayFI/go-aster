@@ -96,7 +96,7 @@ func handlerAPIError(r *Request, response *resty.Response) error {
 	apiErr := &client.APIError{}
 	e := json.Unmarshal(response.Body(), apiErr)
 	if e != nil {
-		r.client.GetLogger().Errorf("failed to unmarshal json: %s\n", e)
+		r.client.GetLogger().Errorf("failed to unmarshal json: %s", e)
 	}
 	if !apiErr.IsValid() {
 		return fmt.Errorf("request failed with status code: %d, body: %s", response.StatusCode(), response.String())

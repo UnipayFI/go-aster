@@ -1,6 +1,8 @@
 package log
 
 import (
+	"context"
+	"fmt"
 	"log/slog"
 	"os"
 	"sync"
@@ -35,17 +37,28 @@ func GetDefaultLogger() Logger {
 }
 
 func (l *defaultLogger) Infof(format string, args ...any) {
-	l.Info(format, args...)
+	l.logf(slog.LevelInfo, format, args...)
 }
 
 func (l *defaultLogger) Warnf(format string, args ...any) {
-	l.Warn(format, args...)
+	l.logf(slog.LevelWarn, format, args...)
 }
 
 func (l *defaultLogger) Errorf(format string, args ...any) {
-	l.Error(format, args...)
+	l.logf(slog.LevelError, format, args...)
 }
 
 func (l *defaultLogger) Debugf(format string, args ...any) {
-	l.Debug(format, args...)
+	l.logf(slog.LevelDebug, format, args...)
+}
+
+// logf formats the message printf-style, as the Logger methods promise
+// (slog's own methods would take args as key/value attributes), skipping the
+// formatting when level is disabled.
+func (l *defaultLogger) logf(level slog.Level, format string, args ...any) {
+	ctx := context.Background()
+	if !l.Enabled(ctx, level) {
+		return
+	}
+	l.Log(ctx, level, fmt.Sprintf(format, args...))
 }
