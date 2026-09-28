@@ -47,23 +47,39 @@ func Do[T any](r *Request) (resp *T, err error) {
 // DoRaw is like Do but returns the raw response body without JSON decoding.
 // Used by endpoints that return non-JSON or non-uniform shapes (rare).
 func DoRaw(r *Request) ([]byte, error) {
+	return DoDecode(r, func(body []byte) ([]byte, error) { return body, nil })
+}
+
+// DoDecode is like Do but hands the response body to decode, for endpoints
+// whose response needs more than decoding into a single type. Failures,
+// including those returned by decode, are logged like Do's.
+func DoDecode[T any](r *Request, decode func(body []byte) (T, error)) (resp T, err error) {
 	if r.err != nil {
-		return nil, r.err
+		return resp, r.err
 	}
+
 	r.r.URL = r.fullURL()
 	r.client.GetLogger().Debugf("request: %s %s", r.method, r.r.URL)
+	defer func() {
+		if err == nil {
+			return
+		}
+		r.client.GetLogger().Errorf("request %s failed: %s", r.r.URL, err)
+	}()
 
 	response, err := r.r.Send()
 	if err != nil {
-		return nil, err
+		return resp, err
 	}
+
+	r.client.GetLogger().Debugf("response: %v", response.String())
 	defer response.RawBody().Close()
 
 	handlerRateLimit(r, response)
 	if response.IsError() {
-		return nil, handlerAPIError(r, response)
+		return resp, handlerAPIError(r, response)
 	}
-	return response.Body(), nil
+	return decode(response.Body())
 }
 
 func handlerRateLimit(r *Request, response *resty.Response) {
