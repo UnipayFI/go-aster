@@ -1,10 +1,13 @@
 package spot
 
 import (
+	"bytes"
 	"context"
+	"errors"
 	"strconv"
 	"time"
 
+	"github.com/UnipayFI/go-aster/v3/common"
 	"github.com/UnipayFI/go-aster/v3/request"
 	"github.com/shopspring/decimal"
 )
@@ -73,9 +76,24 @@ func (s *GetDepthService) SetLimit(limit int) *GetDepthService {
 	return s
 }
 
+// ErrNoOrderBook is returned by GetDepthService when Aster answers with an
+// empty JSON array instead of an order book, which it does for most symbols
+// it knows but no longer lists (delisted symbols and older expired event
+// symbols); a recently expired event symbol may still return an empty book.
+var ErrNoOrderBook = errors.New("spot: symbol has no order book")
+
 func (s *GetDepthService) Do(ctx context.Context) (*DepthResponse, error) {
 	req := request.Get(ctx, s.c, "/api/v3/depth", s.params)
-	return request.Do[DepthResponse](req)
+	return request.DoDecode(req, func(body []byte) (*DepthResponse, error) {
+		if string(bytes.TrimSpace(body)) == "[]" {
+			return nil, ErrNoOrderBook
+		}
+		var resp DepthResponse
+		if err := common.JSONUnmarshal(body, &resp); err != nil {
+			return nil, err
+		}
+		return &resp, nil
+	})
 }
 
 // DepthResponse -- price levels are [price, qty] string pairs to preserve full
