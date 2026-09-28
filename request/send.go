@@ -13,35 +13,19 @@ import (
 // Do executes the request and decodes the response body into *T. Following
 // the official V3 Python demo (send_by_url), all parameters -- including the
 // signature -- are sent as URL query string for every method (GET/POST/PUT/
-// DELETE); the body is left empty.
-func Do[T any](r *Request) (resp *T, err error) {
-	if r.err != nil {
-		return nil, r.err
-	}
-
-	r.r.URL = r.fullURL()
-	r.client.GetLogger().Debugf("request: %s %s", r.method, r.r.URL)
-	defer func() {
-		if err == nil {
-			return
+// DELETE); the body is left empty. The body is decoded whatever its
+// Content-Type; a 204 yields the zero T.
+func Do[T any](r *Request) (*T, error) {
+	return send(r, func(response *resty.Response) (*T, error) {
+		resp := new(T)
+		if response.StatusCode() == http.StatusNoContent {
+			return resp, nil
 		}
-		r.client.GetLogger().Errorf("request %s failed: %s", r.r.URL, err)
-	}()
-
-	var response *resty.Response
-	response, err = r.r.SetResult(&resp).Send()
-	if err != nil {
-		return nil, err
-	}
-
-	r.client.GetLogger().Debugf("response: %v", response.String())
-	defer response.RawBody().Close()
-
-	handlerRateLimit(r, response)
-	if response.IsError() {
-		return nil, handlerAPIError(r, response)
-	}
-	return resp, nil
+		if err := r.client.GetHttpClient().JSONUnmarshal(response.Body(), resp); err != nil {
+			return nil, err
+		}
+		return resp, nil
+	})
 }
 
 // DoRaw is like Do but returns the raw response body without JSON decoding.
@@ -53,7 +37,16 @@ func DoRaw(r *Request) ([]byte, error) {
 // DoDecode is like Do but hands the response body to decode, for endpoints
 // whose response needs more than decoding into a single type. Failures,
 // including those returned by decode, are logged like Do's.
-func DoDecode[T any](r *Request, decode func(body []byte) (T, error)) (resp T, err error) {
+func DoDecode[T any](r *Request, decode func(body []byte) (T, error)) (T, error) {
+	return send(r, func(response *resty.Response) (T, error) {
+		return decode(response.Body())
+	})
+}
+
+// send executes the request, records the rate-limit headers, turns an HTTP
+// error status into an API error and otherwise hands the response to decode.
+// Every failure is logged.
+func send[T any](r *Request, decode func(*resty.Response) (T, error)) (resp T, err error) {
 	if r.err != nil {
 		return resp, r.err
 	}
@@ -79,7 +72,7 @@ func DoDecode[T any](r *Request, decode func(body []byte) (T, error)) (resp T, e
 	if response.IsError() {
 		return resp, handlerAPIError(r, response)
 	}
-	return decode(response.Body())
+	return decode(response)
 }
 
 func handlerRateLimit(r *Request, response *resty.Response) {

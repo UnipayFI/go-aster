@@ -66,3 +66,57 @@ func TestDoDecodeLogsFailures(t *testing.T) {
 		}
 	}
 }
+
+// TestDoDecodesWhateverTheResponse checks that Do decodes the body whatever
+// its Content-Type, never returns a nil *T with a nil error (a null body or a
+// 204 gives the zero T), and still records the rate-limit headers and logs
+// when decoding fails.
+func TestDoDecodesWhateverTheResponse(t *testing.T) {
+	type result struct {
+		A int `json:"a"`
+	}
+	tests := []struct {
+		name        string
+		status      int
+		contentType string
+		body        string
+		want        int
+		wantErr     bool
+	}{
+		{name: "json", status: http.StatusOK, contentType: "application/json", body: `{"a":1}`, want: 1},
+		{name: "text/plain", status: http.StatusOK, contentType: "text/plain", body: `{"a":2}`, want: 2},
+		{name: "no content type", status: http.StatusOK, body: `{"a":3}`, want: 3},
+		{name: "null", status: http.StatusOK, contentType: "application/json", body: `null`},
+		{name: "204", status: http.StatusNoContent},
+		{name: "html", status: http.StatusOK, contentType: "text/html", body: `<html></html>`, wantErr: true},
+		{name: "bad field", status: http.StatusOK, contentType: "application/json", body: `{"a":"x"}`, wantErr: true},
+	}
+	for _, tt := range tests {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if tt.contentType != "" {
+				w.Header().Set("Content-Type", tt.contentType)
+			} else {
+				w.Header()["Content-Type"] = nil
+			}
+			w.Header().Set("X-Mbx-Used-Weight-1m", "7")
+			w.WriteHeader(tt.status)
+			_, _ = w.Write([]byte(tt.body))
+		}))
+		logger := &recordingLogger{}
+		c := client.NewClient(client.ProductSpot, client.WithBaseURL(srv.URL), client.WithLogger(logger))
+		got, err := Do[result](Get(context.Background(), c, "/api/v3/x"))
+		srv.Close()
+		switch {
+		case tt.wantErr && err == nil:
+			t.Errorf("%s: got %+v, want error", tt.name, got)
+		case !tt.wantErr && (err != nil || got == nil || got.A != tt.want):
+			t.Errorf("%s: got %+v, %v, want {A:%d}", tt.name, got, err, tt.want)
+		}
+		if logged := len(logger.errors) == 1; logged != tt.wantErr {
+			t.Errorf("%s: logged %q", tt.name, logger.errors)
+		}
+		if used := c.GetUsedWeight().Used1M; used != 7 {
+			t.Errorf("%s: Used1M = %d, want 7", tt.name, used)
+		}
+	}
+}
