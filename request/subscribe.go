@@ -11,6 +11,17 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+// keepAliveInterval is how often a subscription pings the server, and
+// keepAliveTimeout how long it waits without any frame, ping or pong before
+// giving the connection up. They are variables so tests can shorten them.
+var (
+	keepAliveInterval = common.DEFAULT_KEEP_ALIVE_INTERVAL
+	keepAliveTimeout  = common.DEFAULT_KEEP_ALIVE_TIMEOUT
+)
+
+// controlWriteWait bounds the writes of ping and pong frames.
+const controlWriteWait = 10 * time.Second
+
 type WebSocketClient interface {
 	GetHttpClient() *resty.Client
 	GetLogger() log.Logger
@@ -60,7 +71,26 @@ func subscribeBytes(ctx context.Context, client WebSocketClient, endpoint string
 	doneC := make(chan struct{}, 1)
 	stopC := make(chan struct{})
 
-	go keepAlive(conn, common.DEFAULT_KEEP_ALIVE_TIMEOUT, common.DEFAULT_KEEP_ALIVE_INTERVAL)
+	// Each read, and every ping or pong received while it waits, pushes the
+	// read deadline back by timeout. The server answers the pings keepAlive
+	// sends, so only a peer that has gone silent lets the deadline pass,
+	// which fails ReadMessage and ends the subscription; time spent in
+	// callback does not count. The handlers are set before reading starts,
+	// since they may not change while ReadMessage runs. A failed pong write
+	// is left to surface as a read error, so a close frame already received
+	// is still reported.
+	interval, timeout := keepAliveInterval, keepAliveTimeout
+	extendDeadline := func() { conn.SetReadDeadline(time.Now().Add(timeout)) }
+	conn.SetPongHandler(func(string) error {
+		extendDeadline()
+		return nil
+	})
+	conn.SetPingHandler(func(data string) error {
+		extendDeadline()
+		_ = conn.WriteControl(websocket.PongMessage, []byte(data), time.Now().Add(controlWriteWait))
+		return nil
+	})
+	go keepAlive(conn, interval, stopC)
 
 	// closing marks a caller-initiated close, whose read error is expected
 	// and not reported.
@@ -76,6 +106,7 @@ func subscribeBytes(ctx context.Context, client WebSocketClient, endpoint string
 	go func() {
 		defer close(stopC)
 		for {
+			extendDeadline()
 			_, message, err := conn.ReadMessage()
 			if err != nil {
 				if !closing.Load() {
@@ -90,37 +121,18 @@ func subscribeBytes(ctx context.Context, client WebSocketClient, endpoint string
 	return doneC, stopC, nil
 }
 
-func keepAlive(conn *websocket.Conn, timeout, interval time.Duration) {
-	latest := time.Now()
-
-	// Update activity timestamp on incoming pongs (no reply needed for pongs).
-	conn.SetPongHandler(func(string) error {
-		latest = time.Now()
-		return nil
-	})
-	// Reply to incoming pings with a pong (the gorilla default does this too,
-	// but we override to also update the activity timestamp).
-	conn.SetPingHandler(func(raw string) error {
-		err := conn.WriteControl(websocket.PongMessage, []byte(raw), time.Now().Add(timeout))
-		if err == nil {
-			latest = time.Now()
-		}
-		return err
-	})
-
-	// Set ticker to send ping messages at the interval
+// keepAlive pings the server every interval until stop is closed.
+func keepAlive(conn *websocket.Conn, interval time.Duration, stop <-chan struct{}) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 	for {
-		<-ticker.C
-		if time.Since(latest) > timeout {
-			conn.Close()
+		select {
+		case <-stop:
+			return
+		case <-ticker.C:
+		}
+		if err := conn.WriteControl(websocket.PingMessage, nil, time.Now().Add(controlWriteWait)); err != nil {
 			return
 		}
-		err := conn.WriteMessage(websocket.PingMessage, nil)
-		if err != nil {
-			return
-		}
-		latest = time.Now()
 	}
 }
