@@ -98,7 +98,16 @@ func decodeUserDataEvent(msg []byte) (*WsUserDataEvent, error) {
 	case "listenKeyExpired":
 		var x WsListenKeyExpiredEvent
 		if err := common.JSONUnmarshal(msg, &x); err != nil {
-			return ev, err
+			// Binance has sent this event's E as a quoted string; accept
+			// that form too, so the expiry signal is not lost if Aster does.
+			var quoted struct {
+				EventType string    `json:"e"`
+				EventTime time.Time `json:"E,string,format:unixmilli"`
+			}
+			if common.JSONUnmarshal(msg, &quoted) != nil {
+				return ev, err
+			}
+			x = WsListenKeyExpiredEvent(quoted)
 		}
 		ev.ListenKeyExpired = &x
 		ev.EventTime = x.EventTime
