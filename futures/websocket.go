@@ -12,8 +12,13 @@ import (
 
 // streamPath builds "/ws/<symbol>@<event>". The symbol must be lowercased,
 // but event suffixes like "aggTrade" or "bookTicker" are case-sensitive, so
-// we only lowercase the part before the first '@'.
+// we only lowercase the part before the first '@'. All-market streams
+// ("!miniTicker@arr", "!bookTicker") have no symbol and are used as is; Aster
+// sends nothing on a lowercased one.
 func streamPath(stream string) string {
+	if strings.HasPrefix(stream, "!") {
+		return common.WEBSOCKET_STREAM_SEPARATOR + stream
+	}
 	if i := strings.Index(stream, "@"); i >= 0 {
 		return common.WEBSOCKET_STREAM_SEPARATOR + strings.ToLower(stream[:i]) + stream[i:]
 	}
