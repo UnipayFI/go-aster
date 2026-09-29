@@ -1,35 +1,13 @@
-package futures
+package spot
 
 import (
 	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
 	"github.com/UnipayFI/go-aster/v3/client"
 )
-
-// TestDecodeListenKeyExpired checks the expiry event with E as a JSON number
-// (as documented) and as a quoted number (as Binance has sent it).
-func TestDecodeListenKeyExpired(t *testing.T) {
-	want := time.UnixMilli(1576653824250)
-	for _, msg := range []string{
-		`{"e":"listenKeyExpired","E":1576653824250}`,
-		`{"e":"listenKeyExpired","E":"1576653824250"}`,
-	} {
-		ev, err := decodeUserDataEvent([]byte(msg))
-		if err != nil {
-			t.Fatalf("%s: %v", msg, err)
-		}
-		if ev.ListenKeyExpired == nil || !ev.ListenKeyExpired.EventTime.Equal(want) || !ev.EventTime.Equal(want) {
-			t.Errorf("%s: decoded as %+v", msg, ev)
-		}
-	}
-	if _, err := decodeUserDataEvent([]byte(`{"e":"listenKeyExpired","E":"soon"}`)); err == nil {
-		t.Error("invalid E: want error")
-	}
-}
 
 // TestListenKeyKeepaliveCloseIgnoreBody checks that renewing and deleting the
 // listenKey succeed on an HTTP 200 whatever the body, including a zero-byte
@@ -53,11 +31,11 @@ func TestListenKeyKeepaliveCloseIgnoreBody(t *testing.T) {
 			w.WriteHeader(tt.status)
 			_, _ = w.Write([]byte(tt.body))
 		}))
-		c := NewFuturesClient(client.WithBaseURL(srv.URL), client.WithAuth(testUserAddress, testSignerKeyHex))
+		c := NewSpotClient(client.WithBaseURL(srv.URL), client.WithAuth(testUserAddress, testSignerKeyHex))
 		ctx := context.Background()
 		errs := []error{
-			c.NewRenewListenKeyService().Do(ctx),
-			c.NewDeleteListenKeyService().Do(ctx),
+			c.NewRenewListenKeyService("key").Do(ctx),
+			c.NewDeleteListenKeyService("key").Do(ctx),
 		}
 		srv.Close()
 		for i, err := range errs {

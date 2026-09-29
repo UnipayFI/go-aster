@@ -30,7 +30,8 @@ type ListenKeyResponse struct {
 // RenewListenKeyService -- PUT /fapi/v3/listenKey (USER_STREAM)
 //
 // Unlike spot, futures keepalive takes no params (the listenKey is implied
-// by the signer). Recommended to call every ~60 minutes.
+// by the signer). Recommended to call every ~60 minutes. Keepalive and close
+// report only an error, so the response body is not decoded.
 type RenewListenKeyService struct {
 	c *FuturesClient
 }
@@ -41,7 +42,7 @@ func (c *FuturesClient) NewRenewListenKeyService() *RenewListenKeyService {
 
 func (s *RenewListenKeyService) Do(ctx context.Context) error {
 	req := request.Put(ctx, s.c, "/fapi/v3/listenKey").WithSignature()
-	_, err := request.Do[struct{}](req)
+	_, err := request.DoRaw(req)
 	return err
 }
 
@@ -56,7 +57,7 @@ func (c *FuturesClient) NewDeleteListenKeyService() *DeleteListenKeyService {
 
 func (s *DeleteListenKeyService) Do(ctx context.Context) error {
 	req := request.Delete(ctx, s.c, "/fapi/v3/listenKey").WithSignature()
-	_, err := request.Do[struct{}](req)
+	_, err := request.DoRaw(req)
 	return err
 }
 

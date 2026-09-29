@@ -28,6 +28,9 @@ type ListenKeyResponse struct {
 }
 
 // RenewListenKeyService -- PUT /api/v3/listenKey (USER_STREAM)
+//
+// Keepalive and close report only an error, so the response body is not
+// decoded.
 type RenewListenKeyService struct {
 	c         *SpotClient
 	listenKey string
@@ -39,7 +42,7 @@ func (c *SpotClient) NewRenewListenKeyService(listenKey string) *RenewListenKeyS
 
 func (s *RenewListenKeyService) Do(ctx context.Context) error {
 	req := request.Put(ctx, s.c, "/api/v3/listenKey", map[string]string{"listenKey": s.listenKey}).WithSignature()
-	_, err := request.Do[struct{}](req)
+	_, err := request.DoRaw(req)
 	return err
 }
 
@@ -55,7 +58,7 @@ func (c *SpotClient) NewDeleteListenKeyService(listenKey string) *DeleteListenKe
 
 func (s *DeleteListenKeyService) Do(ctx context.Context) error {
 	req := request.Delete(ctx, s.c, "/api/v3/listenKey", map[string]string{"listenKey": s.listenKey}).WithSignature()
-	_, err := request.Do[struct{}](req)
+	_, err := request.DoRaw(req)
 	return err
 }
 
