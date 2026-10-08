@@ -1,10 +1,12 @@
 package futures
 
 import (
+	"bytes"
 	"context"
 	"strconv"
 	"time"
 
+	"github.com/UnipayFI/go-aster/v3/common"
 	"github.com/UnipayFI/go-aster/v3/request"
 	"github.com/shopspring/decimal"
 )
@@ -80,6 +82,43 @@ func (s *GetMultiAssetsModeService) Do(ctx context.Context) (*MultiAssetsModeRes
 
 type MultiAssetsModeResponse struct {
 	MultiAssetsMargin bool `json:"multiAssetsMargin"`
+}
+
+// AssetExchangeService -- POST /fapi/v3/assetExchange (TRADE)
+//
+// Manually triggers an asset exchange in Multi-Assets Mode, as an auto asset
+// exchange with a threshold of 0 would. Outside Multi-Assets Mode the request
+// is rejected with -4212.
+type AssetExchangeService struct {
+	c *FuturesClient
+}
+
+func (c *FuturesClient) NewAssetExchangeService() *AssetExchangeService {
+	return &AssetExchangeService{c: c}
+}
+
+func (s *AssetExchangeService) Do(ctx context.Context) (*AssetExchangeResponse, error) {
+	req := request.Post(s.c, ctx, "/fapi/v3/assetExchange").WithSignature()
+	return request.DoDecode(req, func(body []byte) (*AssetExchangeResponse, error) {
+		var resp AssetExchangeResponse
+		if len(bytes.TrimSpace(body)) == 0 {
+			return &resp, nil
+		}
+		if err := common.JSONUnmarshal(body, &resp); err != nil {
+			return nil, err
+		}
+		return &resp, nil
+	})
+}
+
+// AssetExchangeResponse is the asset whose balance the exchange updated and
+// its wallet balance afterwards. It is the zero value when no exchange took
+// place, for which Aster returns an empty body.
+type AssetExchangeResponse struct {
+	AccountID  int64           `json:"accountId"`
+	Asset      string          `json:"asset"`
+	Balance    decimal.Decimal `json:"balance"`
+	UpdateTime time.Time       `json:"updateTime,format:unixmilli"`
 }
 
 // ChangeSTPModeService -- POST /fapi/v3/stpMode (TRADE)
