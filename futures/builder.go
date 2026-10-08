@@ -10,11 +10,13 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// The builder user queries below share their request and response shape: the
-// authenticated account is the builder identity, userAddresses narrows the
+// The builder user queries share their request and response shape: the
+// authenticated account is the builder identity, and userAddresses narrows the
 // query to at most 50 users who approved the caller as their builder (others
-// come back in Errors), and without it page/limit walk every bound user in
-// binding order. The caller must itself have deposited at least once.
+// come back in Errors) instead of every bound user. For the account, open
+// order, balance, position and commission rate queries below, page/limit walk
+// the bound users in binding order, and the caller must itself have deposited
+// at least once.
 
 // GetBuilderUserAccountsService -- GET /fapi/v3/builder/userAccounts (USER_DATA)
 //
