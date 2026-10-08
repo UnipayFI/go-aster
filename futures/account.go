@@ -44,8 +44,8 @@ type Balance struct {
 
 // GetAccountService -- GET /fapi/v3/accountWithJoinMargin (USER_DATA)
 //
-// Note the unusual path: V3 renamed /account to /accountWithJoinMargin to
-// signal the response includes joined-margin/multi-asset fields.
+// Returns the join-margin (Multi-Assets) view of the account; see
+// GetAccountWithoutJoinMarginService for the plain /fapi/v3/account view.
 type GetAccountService struct {
 	c *FuturesClient
 }
@@ -56,6 +56,23 @@ func (c *FuturesClient) NewGetAccountService() *GetAccountService {
 
 func (s *GetAccountService) Do(ctx context.Context) (*AccountInfo, error) {
 	req := request.Get(ctx, s.c, "/fapi/v3/accountWithJoinMargin").WithSignature()
+	return request.Do[AccountInfo](req)
+}
+
+// GetAccountWithoutJoinMarginService -- GET /fapi/v3/account (USER_DATA)
+//
+// Same response shape and weight as GetAccountService, computed without join
+// margin.
+type GetAccountWithoutJoinMarginService struct {
+	c *FuturesClient
+}
+
+func (c *FuturesClient) NewGetAccountWithoutJoinMarginService() *GetAccountWithoutJoinMarginService {
+	return &GetAccountWithoutJoinMarginService{c: c}
+}
+
+func (s *GetAccountWithoutJoinMarginService) Do(ctx context.Context) (*AccountInfo, error) {
+	req := request.Get(ctx, s.c, "/fapi/v3/account").WithSignature()
 	return request.Do[AccountInfo](req)
 }
 

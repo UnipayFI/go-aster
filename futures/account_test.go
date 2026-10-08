@@ -2,10 +2,15 @@ package futures
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/UnipayFI/go-aster/v3/client"
 )
 
 // incomeBody is the response sample from the Get Income History doc, which
@@ -79,6 +84,38 @@ func TestIncomeRecordQuotedTags(t *testing.T) {
 		}
 		if got := b.Field(i).Tag.Get("json"); got != want {
 			t.Errorf("incomeRecordQuoted.%s json tag = %q, want %q", b.Field(i).Name, got, want)
+		}
+	}
+}
+
+// TestGetAccountPaths checks that the join-margin and plain account services
+// call their own paths, signed, and share the response shape.
+func TestGetAccountPaths(t *testing.T) {
+	for want, do := range map[string]func(*FuturesClient) (*AccountInfo, error){
+		"/fapi/v3/accountWithJoinMargin": func(c *FuturesClient) (*AccountInfo, error) {
+			return c.NewGetAccountService().Do(context.Background())
+		},
+		"/fapi/v3/account": func(c *FuturesClient) (*AccountInfo, error) {
+			return c.NewGetAccountWithoutJoinMarginService().Do(context.Background())
+		},
+	} {
+		var gotPath string
+		var gotQuery url.Values
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			gotPath, gotQuery = r.URL.Path, r.URL.Query()
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"feeTier":1,"canTrade":true,"totalWalletBalance":"103.12345678"}`))
+		}))
+		got, err := do(NewFuturesClient(client.WithBaseURL(srv.URL), client.WithAuth(testUserAddress, testSignerKeyHex)))
+		srv.Close()
+		if err != nil {
+			t.Fatalf("%s: %v", want, err)
+		}
+		if gotPath != want || gotQuery.Get("signature") == "" {
+			t.Errorf("path = %q, signature = %q, want %q signed", gotPath, gotQuery.Get("signature"), want)
+		}
+		if got.FeeTier != 1 || !got.CanTrade || got.TotalWalletBalance.String() != "103.12345678" {
+			t.Errorf("%s: decoded %+v", want, got)
 		}
 	}
 }
