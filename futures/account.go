@@ -281,10 +281,10 @@ type incomeRecordQuoted struct {
 	TradeID    string          `json:"tradeId"`
 }
 
-// GetLeverageBracketService -- GET /fapi/v3/leverageBracket
+// GetLeverageBracketService -- GET /fapi/v3/leverageBrackets
 //
-// Without symbol returns []LeverageBracket; with symbol returns a single
-// LeverageBracket. Wrap in a slice for uniform handling.
+// Calls the plural path the docs recommend; the singular
+// /fapi/v3/leverageBracket is deprecated but still answers the same.
 type GetLeverageBracketService struct {
 	c      *FuturesClient
 	params map[string]string
@@ -303,7 +303,7 @@ func (s *GetLeverageBracketService) SetSymbol(symbol string) *GetLeverageBracket
 // whether `symbol` is set (with symbol the array has length 1), so we always
 // decode as `[]LeverageBracket`.
 func (s *GetLeverageBracketService) Do(ctx context.Context) ([]LeverageBracket, error) {
-	req := request.Get(ctx, s.c, "/fapi/v3/leverageBracket", s.params).WithSignature()
+	req := request.Get(ctx, s.c, "/fapi/v3/leverageBrackets", s.params).WithSignature()
 	multi, err := request.Do[[]LeverageBracket](req)
 	if err != nil {
 		return nil, err
