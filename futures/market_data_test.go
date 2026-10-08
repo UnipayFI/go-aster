@@ -74,3 +74,31 @@ func TestGetRemainingOpenableNotionalValue(t *testing.T) {
 		t.Errorf("RemainingOpenableNotionalValue = %s", got.RemainingOpenableNotionalValue)
 	}
 }
+
+// liveAssetLogos is the head of a live /fapi/v3/common/asset/all-asset-logo
+// response.
+const liveAssetLogos = `[{"assetCode":"BTC","logoUrl":"https://static.apollox.com/image/admin_mgs_image_upload/` +
+	`20251010/1d7eca3f-2cc2-4d20-b39e-e93e104efc38.png"},{"assetCode":"ETH","logoUrl":"https://static.apollox.com/` +
+	`image/admin_mgs_image_upload/20251010/29537d4d-7a9e-4074-baed-60ba2b9a40ce.png"}]`
+
+func TestGetAllAssetLogos(t *testing.T) {
+	var gotPath string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(liveAssetLogos))
+	}))
+	defer srv.Close()
+
+	got, err := NewFuturesClient(client.WithBaseURL(srv.URL)).NewGetAllAssetLogosService().Do(context.Background())
+	if err != nil {
+		t.Fatalf("Do: %v", err)
+	}
+	if gotPath != "/fapi/v3/common/asset/all-asset-logo" {
+		t.Errorf("path = %q", gotPath)
+	}
+	if len(got) != 2 || got[1].AssetCode != "ETH" ||
+		got[0].LogoURL != "https://static.apollox.com/image/admin_mgs_image_upload/20251010/1d7eca3f-2cc2-4d20-b39e-e93e104efc38.png" {
+		t.Errorf("decoded %+v", got)
+	}
+}

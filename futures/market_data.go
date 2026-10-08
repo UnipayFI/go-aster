@@ -710,3 +710,28 @@ func (s *GetRemainingOpenableNotionalValueService) Do(ctx context.Context) (*Rem
 type RemainingOpenableNotionalValue struct {
 	RemainingOpenableNotionalValue decimal.Decimal `json:"remainingOpenableNotionalValue"`
 }
+
+// GetAllAssetLogosService -- GET /fapi/v3/common/asset/all-asset-logo
+//
+// Returns the logo URL of every active asset.
+type GetAllAssetLogosService struct {
+	c *FuturesClient
+}
+
+func (c *FuturesClient) NewGetAllAssetLogosService() *GetAllAssetLogosService {
+	return &GetAllAssetLogosService{c: c}
+}
+
+func (s *GetAllAssetLogosService) Do(ctx context.Context) ([]AssetLogo, error) {
+	req := request.Get(ctx, s.c, "/fapi/v3/common/asset/all-asset-logo")
+	resp, err := request.Do[[]AssetLogo](req)
+	if err != nil {
+		return nil, err
+	}
+	return *resp, nil
+}
+
+type AssetLogo struct {
+	AssetCode string `json:"assetCode"`
+	LogoURL   string `json:"logoUrl"`
+}
