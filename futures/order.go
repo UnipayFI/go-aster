@@ -61,6 +61,10 @@ func (s *PlaceOrderService) SetPositionSide(p PositionSide) *PlaceOrderService {
 	return s
 }
 
+// SetTimeInForce sets the time in force. STOP_MARKET, TAKE_PROFIT_MARKET and
+// TRAILING_STOP_MARKET orders only accept GTC. As with every parameter, one
+// that does not apply to the order type is rejected (PARAM_NOT_REQUIRED)
+// rather than ignored.
 func (s *PlaceOrderService) SetTimeInForce(tif TimeInForce) *PlaceOrderService {
 	s.params["timeInForce"] = string(tif)
 	return s
