@@ -24,6 +24,7 @@ func (s *GetExchangeInfoService) Do(ctx context.Context) (*ExchangeInfoResponse,
 }
 
 type ExchangeInfoResponse struct {
+	FuturesType     string          `json:"futuresType"` // e.g. "U_MARGINED"
 	Timezone        string          `json:"timezone"`
 	ServerTime      time.Time       `json:"serverTime,format:unixmilli"`
 	RateLimits      []RateLimit     `json:"rateLimits"`

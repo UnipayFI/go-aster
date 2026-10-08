@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -65,5 +66,36 @@ func TestPlaceChaseOrderResponse(t *testing.T) {
 	if got.Symbol != "BTCUSDT" || got.ChaseOffset.String() != "0.5" || got.BookTime == nil ||
 		!got.BookTime.Equal(time.UnixMilli(1747728000000)) || got.StrategyType != "" {
 		t.Errorf("doc response decoded as %+v", got)
+	}
+}
+
+// docNewOrderBody is the response sample from the New Order doc.
+const docNewOrderBody = `{"clientOrderId":"testOrder","cumQty":"0","cumQuote":"0","executedQty":"0",` +
+	`"orderId":22542179,"avgPrice":"0.00000","origQty":"10","price":"0","reduceOnly":false,"side":"BUY",` +
+	`"positionSide":"SHORT","status":"NEW","stopPrice":"9300","closePosition":false,"symbol":"BTCUSDT",` +
+	`"timeInForce":"GTC","type":"TRAILING_STOP_MARKET","origType":"TRAILING_STOP_MARKET","activatePrice":"9020",` +
+	`"priceRate":"0.3","updateTime":1566818724722,"workingType":"CONTRACT_PRICE","priceProtect":false,` +
+	`"pegPriceType":"","stpMode":""}`
+
+func TestPlaceOrderResponse(t *testing.T) {
+	got, err := newTestClient(t, docNewOrderBody).
+		NewPlaceOrderService("BTCUSDT", SideBuy, OrderTypeTrailingStopMarket).Do(context.Background())
+	if err != nil {
+		t.Fatalf("Do: %v", err)
+	}
+	if got.OrderId != 22542179 || got.PegPriceType != "" || got.STPMode != "" || got.Time != nil ||
+		!got.UpdateTime.Equal(time.UnixMilli(1566818724722)) {
+		t.Errorf("decoded %+v", got)
+	}
+
+	body := strings.Replace(docNewOrderBody, `"pegPriceType":"","stpMode":""`,
+		`"pegPriceType":"QUEUE_1","stpMode":"EXPIRE_MAKER"`, 1)
+	got, err = newTestClient(t, body).
+		NewPlaceOrderService("BTCUSDT", SideBuy, OrderTypeLimit).Do(context.Background())
+	if err != nil {
+		t.Fatalf("Do: %v", err)
+	}
+	if got.PegPriceType != PegQueue1 || got.STPMode != STPExpireMaker {
+		t.Errorf("PegPriceType = %q, STPMode = %q", got.PegPriceType, got.STPMode)
 	}
 }

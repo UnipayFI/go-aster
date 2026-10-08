@@ -127,6 +127,8 @@ type AccountPosition struct {
 	MaxNotional            decimal.Decimal `json:"maxNotional"`
 	PositionSide           PositionSide    `json:"positionSide"`
 	PositionAmt            decimal.Decimal `json:"positionAmt"`
+	Notional               decimal.Decimal `json:"notional"`
+	IsolatedWallet         decimal.Decimal `json:"isolatedWallet"`
 	UpdateTime             int64           `json:"updateTime"`
 }
 

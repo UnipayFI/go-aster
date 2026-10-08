@@ -102,3 +102,20 @@ func TestGetAllAssetLogos(t *testing.T) {
 		t.Errorf("decoded %+v", got)
 	}
 }
+
+// liveExchangeInfoHead is a live /fapi/v3/exchangeInfo response with the
+// symbols and assets dropped.
+const liveExchangeInfoHead = `{"timezone":"UTC","serverTime":1791471905124,"futuresType":"U_MARGINED",` +
+	`"rateLimits":[{"rateLimitType":"ORDERS","interval":"SECOND","intervalNum":10,"limit":300}],` +
+	`"exchangeFilters":[],"assets":[],"symbols":[]}`
+
+func TestExchangeInfoFuturesType(t *testing.T) {
+	var e ExchangeInfoResponse
+	if err := common.JSONUnmarshal([]byte(liveExchangeInfoHead), &e); err != nil {
+		t.Fatal(err)
+	}
+	if e.FuturesType != "U_MARGINED" || !e.ServerTime.Equal(time.UnixMilli(1791471905124)) ||
+		len(e.RateLimits) != 1 || e.RateLimits[0].Interval != "SECOND" {
+		t.Errorf("decoded %+v", e)
+	}
+}

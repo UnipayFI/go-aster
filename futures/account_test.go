@@ -104,7 +104,9 @@ func TestGetAccountPaths(t *testing.T) {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			gotPath, gotQuery = r.URL.Path, r.URL.Query()
 			w.Header().Set("Content-Type", "application/json")
-			_, _ = w.Write([]byte(`{"feeTier":1,"canTrade":true,"totalWalletBalance":"103.12345678"}`))
+			_, _ = w.Write([]byte(`{"feeTier":1,"canTrade":true,"totalWalletBalance":"103.12345678",` +
+				`"positions":[{"symbol":"BTCUSDT","positionSide":"BOTH","positionAmt":"0.002",` +
+				`"notional":"166.6","isolatedWallet":"8.33","updateTime":0}]}`))
 		}))
 		got, err := do(NewFuturesClient(client.WithBaseURL(srv.URL), client.WithAuth(testUserAddress, testSignerKeyHex)))
 		srv.Close()
@@ -114,7 +116,9 @@ func TestGetAccountPaths(t *testing.T) {
 		if gotPath != want || gotQuery.Get("signature") == "" {
 			t.Errorf("path = %q, signature = %q, want %q signed", gotPath, gotQuery.Get("signature"), want)
 		}
-		if got.FeeTier != 1 || !got.CanTrade || got.TotalWalletBalance.String() != "103.12345678" {
+		if got.FeeTier != 1 || !got.CanTrade || got.TotalWalletBalance.String() != "103.12345678" ||
+			len(got.Positions) != 1 || got.Positions[0].Notional.String() != "166.6" ||
+			got.Positions[0].IsolatedWallet.String() != "8.33" {
 			t.Errorf("%s: decoded %+v", want, got)
 		}
 	}

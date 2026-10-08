@@ -36,6 +36,8 @@ type Order struct {
 	PriceProtect  bool            `json:"priceProtect"`
 	ActivatePrice decimal.Decimal `json:"activatePrice"`
 	PriceRate     decimal.Decimal `json:"priceRate"`
+	PegPriceType  PegPriceType    `json:"pegPriceType"`          // only set for BBO-pegged orders
+	STPMode       STPMode         `json:"stpMode"`               // only set when the order carries one
 	Time          *time.Time      `json:"time,format:unixmilli"` // nil in place, modify and cancel responses
 	UpdateTime    time.Time       `json:"updateTime,format:unixmilli"`
 }

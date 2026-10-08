@@ -273,6 +273,8 @@ func (s *GetPositionMarginHistoryService) Do(ctx context.Context) ([]PositionMar
 	return *resp, nil
 }
 
+// PositionMarginHistoryEntry is one isolated margin change. DeltaType (e.g.
+// "TRADE") and ClientTranID are not present on every entry.
 type PositionMarginHistoryEntry struct {
 	Amount       decimal.Decimal `json:"amount"`
 	Asset        string          `json:"asset"`
@@ -280,6 +282,8 @@ type PositionMarginHistoryEntry struct {
 	Time         time.Time       `json:"time,format:unixmilli"`
 	Type         int             `json:"type"`
 	PositionSide PositionSide    `json:"positionSide"`
+	DeltaType    string          `json:"deltaType"`
+	ClientTranID string          `json:"clientTranId"`
 }
 
 // GetPositionRiskService -- GET /fapi/v3/positionRisk (USER_DATA)
@@ -319,6 +323,8 @@ type PositionRisk struct {
 	Symbol           string          `json:"symbol"`
 	UnRealizedProfit decimal.Decimal `json:"unRealizedProfit"`
 	PositionSide     PositionSide    `json:"positionSide"`
+	Notional         decimal.Decimal `json:"notional"`
+	IsolatedWallet   decimal.Decimal `json:"isolatedWallet"`
 	UpdateTime       time.Time       `json:"updateTime,format:unixmilli"`
 }
 
