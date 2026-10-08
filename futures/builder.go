@@ -3,6 +3,7 @@ package futures
 import (
 	"context"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/UnipayFI/go-aster/v3/request"
@@ -15,7 +16,7 @@ import (
 // builder code. The authenticated account is the builder identity, so there is
 // no separate builder address parameter. If neither startTime nor endTime is
 // set, the recent 7 days are returned; the resolved startTime may not be more
-// than 30 days before now, and endTime may not be more than 1 day ahead of
+// than 90 days before now, and endTime may not be more than 1 day ahead of
 // server time. Results are ordered by trade time descending.
 type GetBuilderUserTradesService struct {
 	c      *FuturesClient
@@ -24,6 +25,14 @@ type GetBuilderUserTradesService struct {
 
 func (c *FuturesClient) NewGetBuilderUserTradesService() *GetBuilderUserTradesService {
 	return &GetBuilderUserTradesService{c: c, params: map[string]string{}}
+}
+
+// SetUserAddresses only returns trades of these users (at most 50). Each must
+// have approved the caller as its builder; any other address is reported in
+// Errors instead. When unset, trades of every bound user are returned.
+func (s *GetBuilderUserTradesService) SetUserAddresses(addresses ...string) *GetBuilderUserTradesService {
+	s.params["userAddresses"] = strings.Join(addresses, ",")
+	return s
 }
 
 func (s *GetBuilderUserTradesService) SetStartTime(t time.Time) *GetBuilderUserTradesService {
@@ -59,10 +68,13 @@ type BuilderUserTrades struct {
 	PageSize    int                `json:"pageSize"`
 	HasMore     bool               `json:"hasMore"`
 	Rows        []BuilderUserTrade `json:"rows"`
+	Errors      []BuilderUserError `json:"errors"`
 }
 
 // BuilderUserTrade is one trade executed by a user under the caller's builder
 // code. baseType is CRYPTO or STOCK; totalQuota is the notional (price*qty).
+// Fee is from the trading user's side: negative when a fee is charged,
+// positive for a rebate.
 type BuilderUserTrade struct {
 	TradeID        int64           `json:"tradeId"`
 	InsertTime     time.Time       `json:"insertTime,format:unixmilli"`
@@ -83,6 +95,15 @@ type BuilderUserTrade struct {
 	MarginAsset    string          `json:"marginAsset"`
 	UserAddress    string          `json:"userAddress"`
 	BuilderFee     decimal.Decimal `json:"builderFee"`
+}
+
+// BuilderUserError reports a requested user address that a builder user
+// query left out of rows, with the reason: the user has not deposited, has
+// privacy mode on, its privacy status could not be checked, or (only when
+// userAddresses is set) it is not bound to the caller.
+type BuilderUserError struct {
+	Address  string `json:"address"`
+	ErrorMsg string `json:"errorMsg"`
 }
 
 // GetBuilderApprovedUserListService -- GET /fapi/v3/builder/approvedUserList (USER_DATA)
