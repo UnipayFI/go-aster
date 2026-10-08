@@ -106,6 +106,14 @@ const (
 	IncomeCommission              IncomeType = "COMMISSION"
 	IncomeInsuranceClear          IncomeType = "INSURANCE_CLEAR"
 	IncomeMarketMerchantReturnRwd IncomeType = "MARKET_MERCHANT_RETURN_REWARD"
+	IncomeReferralKickback        IncomeType = "REFERRAL_KICKBACK"
+	IncomeCommissionRebate        IncomeType = "COMMISSION_REBATE"
+	IncomeMarketMakerRebate       IncomeType = "MARKET_MAKER_REBATE"
+	IncomeAPIRebate               IncomeType = "API_REBATE"
+	IncomeContestReward           IncomeType = "CONTEST_REWARD"
+	IncomeCrossCollateralTransfer IncomeType = "CROSS_COLLATERAL_TRANSFER"
+	IncomeInternalTransfer        IncomeType = "INTERNAL_TRANSFER"
+	IncomeAutoExchange            IncomeType = "AUTO_EXCHANGE"
 )
 
 // TransferKindType controls direction of a futures<->spot transfer.
