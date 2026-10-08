@@ -682,3 +682,31 @@ type OpenInterest struct {
 	OpenInterest decimal.Decimal `json:"openInterest"`
 	Time         time.Time       `json:"time,format:unixmilli"`
 }
+
+// GetRemainingOpenableNotionalValueService -- GET /fapi/v3/remainingOpenableNotionalValue
+//
+// Returns the notional (in USDT) that can still be opened on a symbol at the
+// given leverage: the remaining open interest cap of the leverage tier that
+// leverage falls into. This is a symbol-level cap, not an account-specific
+// value; -1 means the symbol has no cap. A leverage that is not positive or
+// exceeds the highest tier is rejected with -4028.
+type GetRemainingOpenableNotionalValueService struct {
+	c      *FuturesClient
+	params map[string]string
+}
+
+func (c *FuturesClient) NewGetRemainingOpenableNotionalValueService(symbol string, leverage int) *GetRemainingOpenableNotionalValueService {
+	return &GetRemainingOpenableNotionalValueService{c: c, params: map[string]string{
+		"symbol":   symbol,
+		"leverage": strconv.Itoa(leverage),
+	}}
+}
+
+func (s *GetRemainingOpenableNotionalValueService) Do(ctx context.Context) (*RemainingOpenableNotionalValue, error) {
+	req := request.Get(ctx, s.c, "/fapi/v3/remainingOpenableNotionalValue", s.params)
+	return request.Do[RemainingOpenableNotionalValue](req)
+}
+
+type RemainingOpenableNotionalValue struct {
+	RemainingOpenableNotionalValue decimal.Decimal `json:"remainingOpenableNotionalValue"`
+}

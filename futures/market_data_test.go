@@ -1,9 +1,14 @@
 package futures
 
 import (
+	"context"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"testing"
 	"time"
 
+	"github.com/UnipayFI/go-aster/v3/client"
 	"github.com/UnipayFI/go-aster/v3/common"
 )
 
@@ -38,5 +43,34 @@ func TestBookTickerLastUpdateID(t *testing.T) {
 	}
 	if b.LastUpdateId != 571363136052 || !b.Time.Equal(time.UnixMilli(1790610988500)) || b.AskPrice.String() != "83304" {
 		t.Errorf("decoded %+v", b)
+	}
+}
+
+// TestGetRemainingOpenableNotionalValue checks the request and decodes a live
+// /fapi/v3/remainingOpenableNotionalValue?symbol=BTCUSDT&leverage=10 response.
+func TestGetRemainingOpenableNotionalValue(t *testing.T) {
+	var gotPath string
+	var gotQuery url.Values
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath, gotQuery = r.URL.Path, r.URL.Query()
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"remainingOpenableNotionalValue":"531083199.18960000000"}`))
+	}))
+	defer srv.Close()
+
+	got, err := NewFuturesClient(client.WithBaseURL(srv.URL)).
+		NewGetRemainingOpenableNotionalValueService("BTCUSDT", 10).Do(context.Background())
+	if err != nil {
+		t.Fatalf("Do: %v", err)
+	}
+	if gotPath != "/fapi/v3/remainingOpenableNotionalValue" {
+		t.Errorf("path = %q", gotPath)
+	}
+	assertCovers(t, gotQuery, map[string]string{"symbol": "BTCUSDT", "leverage": "10"})
+	if gotQuery.Has("signature") {
+		t.Error("public endpoint was signed")
+	}
+	if got.RemainingOpenableNotionalValue.String() != "531083199.1896" {
+		t.Errorf("RemainingOpenableNotionalValue = %s", got.RemainingOpenableNotionalValue)
 	}
 }
