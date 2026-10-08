@@ -154,8 +154,9 @@ func (s *PlaceOrderService) Do(ctx context.Context) (*Order, error) {
 
 // ModifyOrderService -- PUT /fapi/v3/order (TRADE)
 //
-// Only LIMIT orders can be modified, and only quantity / price. Either
-// orderId or origClientOrderId must be set; orderId wins if both.
+// Only LIMIT orders can be modified, and only quantity / price, both of which
+// must be set. Either orderId or origClientOrderId must be set; orderId wins
+// if both.
 type ModifyOrderService struct {
 	c      *FuturesClient
 	params map[string]string
@@ -172,6 +173,13 @@ func (s *ModifyOrderService) SetOrderId(id int64) *ModifyOrderService {
 
 func (s *ModifyOrderService) SetOrigClientOrderId(id string) *ModifyOrderService {
 	s.params["origClientOrderId"] = id
+	return s
+}
+
+// SetSide is optional; when set, the server checks it against the order's
+// actual side.
+func (s *ModifyOrderService) SetSide(side OrderSide) *ModifyOrderService {
+	s.params["side"] = string(side)
 	return s
 }
 
@@ -663,13 +671,20 @@ func (s *GetOpenOrdersService) Do(ctx context.Context) ([]Order, error) {
 }
 
 // GetAllOrdersService -- GET /fapi/v3/allOrders (USER_DATA)
+//
+// An empty symbol is left out of the request, which returns orders across all
+// symbols.
 type GetAllOrdersService struct {
 	c      *FuturesClient
 	params map[string]string
 }
 
 func (c *FuturesClient) NewGetAllOrdersService(symbol string) *GetAllOrdersService {
-	return &GetAllOrdersService{c: c, params: map[string]string{"symbol": symbol}}
+	s := &GetAllOrdersService{c: c, params: map[string]string{}}
+	if symbol != "" {
+		s.params["symbol"] = symbol
+	}
+	return s
 }
 
 func (s *GetAllOrdersService) SetOrderId(id int64) *GetAllOrdersService {

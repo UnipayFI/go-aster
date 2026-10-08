@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -97,5 +98,106 @@ func TestPlaceOrderResponse(t *testing.T) {
 	}
 	if got.PegPriceType != PegQueue1 || got.STPMode != STPExpireMaker {
 		t.Errorf("PegPriceType = %q, STPMode = %q", got.PegPriceType, got.STPMode)
+	}
+}
+
+// TestRequestParams locks the path and query of request parameters added by
+// the 2026-10-08 docs update.
+func TestRequestParams(t *testing.T) {
+	ctx := context.Background()
+	for _, tt := range []struct {
+		name   string
+		body   string
+		do     func(*FuturesClient) error
+		path   string
+		want   map[string]string
+		absent []string
+	}{
+		{
+			name: "modify order side",
+			body: docNewOrderBody,
+			do: func(c *FuturesClient) error {
+				_, err := c.NewModifyOrderService("BTCUSDT").SetOrderId(1).SetSide(SideSell).
+					SetQuantity(decimal.NewFromInt(2)).SetPrice(decimal.NewFromInt(3)).Do(ctx)
+				return err
+			},
+			path: "/fapi/v3/order",
+			want: map[string]string{"symbol": "BTCUSDT", "orderId": "1", "side": "SELL", "quantity": "2", "price": "3"},
+		},
+		{
+			name: "all orders without symbol",
+			body: `[]`,
+			do: func(c *FuturesClient) error {
+				_, err := c.NewGetAllOrdersService("").SetLimit(5).Do(ctx)
+				return err
+			},
+			path:   "/fapi/v3/allOrders",
+			want:   map[string]string{"limit": "5"},
+			absent: []string{"symbol"},
+		},
+		{
+			name: "all orders with symbol",
+			body: `[]`,
+			do: func(c *FuturesClient) error {
+				_, err := c.NewGetAllOrdersService("BTCUSDT").Do(ctx)
+				return err
+			},
+			path: "/fapi/v3/allOrders",
+			want: map[string]string{"symbol": "BTCUSDT"},
+		},
+		{
+			name: "user trades order id",
+			body: `[]`,
+			do: func(c *FuturesClient) error {
+				_, err := c.NewGetUserTradesService("BTCUSDT").SetOrderId(25851813).Do(ctx)
+				return err
+			},
+			path: "/fapi/v3/userTrades",
+			want: map[string]string{"symbol": "BTCUSDT", "orderId": "25851813"},
+		},
+		{
+			name: "position margin client tran id",
+			body: `{"amount":100.0,"code":200,"msg":"Successfully modify position margin.","type":1}`,
+			do: func(c *FuturesClient) error {
+				_, err := c.NewModifyIsolatedPositionMarginService("BTCUSDT", decimal.NewFromInt(100), PositionMarginAdd).
+					SetClientTranId("margin-1").Do(ctx)
+				return err
+			},
+			path: "/fapi/v3/positionMargin",
+			want: map[string]string{"symbol": "BTCUSDT", "amount": "100", "type": "1", "clientTranId": "margin-1"},
+		},
+		{
+			name: "leverage brackets",
+			body: `[{"symbol":"BTCUSDT","brackets":[]}]`,
+			do: func(c *FuturesClient) error {
+				_, err := c.NewGetLeverageBracketService().SetSymbol("BTCUSDT").Do(ctx)
+				return err
+			},
+			path: "/fapi/v3/leverageBrackets",
+			want: map[string]string{"symbol": "BTCUSDT"},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			var gotPath string
+			var gotQuery url.Values
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				gotPath, gotQuery = r.URL.Path, r.URL.Query()
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write([]byte(tt.body))
+			}))
+			defer srv.Close()
+			if err := tt.do(NewFuturesClient(client.WithBaseURL(srv.URL), client.WithAuth(testUserAddress, testSignerKeyHex))); err != nil {
+				t.Fatalf("Do: %v", err)
+			}
+			if gotPath != tt.path {
+				t.Errorf("path = %q, want %q", gotPath, tt.path)
+			}
+			assertCovers(t, gotQuery, tt.want)
+			for _, key := range tt.absent {
+				if gotQuery.Has(key) {
+					t.Errorf("query has %q = %q, want it left out", key, gotQuery.Get(key))
+				}
+			}
+		})
 	}
 }

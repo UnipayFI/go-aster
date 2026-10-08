@@ -222,6 +222,13 @@ func (s *ModifyIsolatedPositionMarginService) SetPositionSide(p PositionSide) *M
 	return s
 }
 
+// SetClientTranId sets an idempotency key of at most 64 characters; a repeat
+// for the same account and symbol within 7 days is rejected as a duplicate.
+func (s *ModifyIsolatedPositionMarginService) SetClientTranId(id string) *ModifyIsolatedPositionMarginService {
+	s.params["clientTranId"] = id
+	return s
+}
+
 func (s *ModifyIsolatedPositionMarginService) Do(ctx context.Context) (*ModifyMarginResponse, error) {
 	req := request.Post(s.c, ctx, "/fapi/v3/positionMargin", s.params).WithSignature()
 	return request.Do[ModifyMarginResponse](req)

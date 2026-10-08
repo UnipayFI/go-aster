@@ -142,6 +142,13 @@ func (c *FuturesClient) NewGetUserTradesService(symbol string) *GetUserTradesSer
 	return &GetUserTradesService{c: c, params: map[string]string{"symbol": symbol}}
 }
 
+// SetOrderId only returns trades of this order; it takes precedence over the
+// time and fromId filters.
+func (s *GetUserTradesService) SetOrderId(id int64) *GetUserTradesService {
+	s.params["orderId"] = strconv.FormatInt(id, 10)
+	return s
+}
+
 func (s *GetUserTradesService) SetStartTime(t time.Time) *GetUserTradesService {
 	s.params["startTime"] = strconv.FormatInt(t.UnixMilli(), 10)
 	return s
