@@ -49,7 +49,7 @@ type TimeInForce string
 const (
 	TimeInForceGTC    TimeInForce = "GTC"
 	TimeInForceIOC    TimeInForce = "IOC"
-	TimeInForceFOK    TimeInForce = "FOK"
+	TimeInForceFOK    TimeInForce = "FOK" // not supported: exchangeInfo and the docs no longer list it
 	TimeInForceGTX    TimeInForce = "GTX"
 	TimeInForceHidden TimeInForce = "HIDDEN"
 )

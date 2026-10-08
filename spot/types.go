@@ -38,9 +38,9 @@ type TimeInForce string
 const (
 	TimeInForceGTC    TimeInForce = "GTC"
 	TimeInForceIOC    TimeInForce = "IOC"
-	TimeInForceFOK    TimeInForce = "FOK"
+	TimeInForceFOK    TimeInForce = "FOK" // not supported for placing orders: rejected with -1115 INVALID_TIF
 	TimeInForceGTX    TimeInForce = "GTX"
-	TimeInForceHidden TimeInForce = "HIDDEN"
+	TimeInForceHidden TimeInForce = "HIDDEN" // hidden/iceberg order, not shown in the order book
 )
 
 // KlineInterval values accepted by /api/v3/klines.
