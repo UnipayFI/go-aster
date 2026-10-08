@@ -10,14 +10,14 @@ Go SDK for the [Aster DEX](https://www.asterdex.com) **V3** API (Spot + Futures,
 
 | API                                                        | Aligned to                                                                             |
 | ---------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| Spot + Futures + Aster-Chain V3 REST + WebSocket (public / private) | [2026-8-26](https://asterdex.github.io/aster-api-website/changelog/upcoming-changes/) |
+| Spot + Futures + Aster-Chain V3 REST + WebSocket (public / private) | [2026-10-8](https://asterdex.github.io/aster-api-website/changelog/upcoming-changes/) |
 
 ---
 
 ## Features
 
 - ✅ **Spot REST**: 30 endpoints — market data, orders, account, transfers, withdrawals, Spot Builder (Aster Code)
-- ✅ **Futures REST**: ~60 endpoints — market, trading (incl. chase, strategy, batch-modify & guarded-cancel orders), position, account, STP, MMP, sub-accounts, asset migration, agent registration & approval, builder queries, announcements
+- ✅ **Futures REST**: ~70 endpoints — market, trading (incl. chase, strategy, batch-modify & guarded-cancel orders), position, account, asset exchange, STP, MMP, sub-accounts, asset migration, agent registration & approval, builder user queries, announcements
 - ✅ **Aster-Chain REST**: 10 endpoints — deposit addresses, EVM & Solana withdrawals, spot/perp wallet transfers, withdrawal limits & fee estimates
 - ✅ **WebSocket Streaming**: full Spot & Futures market streams plus user data streams
 - ✅ **Sub-account Flows**: bind / create / update / transfer with master + child signature inputs
@@ -250,16 +250,16 @@ Go 1.27 only honours `format` tags when the experimental `ExperimentalSupportFor
 </details>
 
 <details>
-<summary><b>Futures REST (~45)</b></summary>
+<summary><b>Futures REST (~55)</b></summary>
 
 - **General**: `Ping`, `Time`, `Noop`
-- **Market data**: `ExchangeInfo`, `Depth`, `Trades`, `HistoricalTrades`, `AggTrades`, `Klines`, `IndexPriceKlines`, `MarkPriceKlines`, `PremiumIndex`, `FundingRate`, `FundingInfo`, `24hTicker`, `TickerPrice`, `BookTicker`, `IndexReferences`
+- **Market data**: `ExchangeInfo`, `Depth`, `Trades`, `HistoricalTrades`, `AggTrades`, `Klines`, `IndexPriceKlines`, `MarkPriceKlines`, `PremiumIndex`, `FundingRate`, `FundingInfo`, `24hTicker`, `TickerPrice`, `BookTicker`, `IndexReferences`, `RemainingOpenableNotionalValue`, `AllAssetLogos`
 - **Trading**: `PlaceOrder`, `ModifyOrder`, `ModifyMultipleOrders`, `BatchOrders`, `FuturesSpotTransfer`, `GetOrder`, `CancelOrder`, `CancelAllOpenOrders`, `CancelMultipleOrders`, `CountdownCancelAll`, `GetOpenOrder`, `GetOpenOrders`, `GetAllOrders`
-- **Position config**: `ChangePositionMode`, `GetPositionMode`, `ChangeMultiAssetsMode`, `GetMultiAssetsMode`, `ChangeLeverage`, `ChangeMarginType`, `ModifyIsolatedPositionMargin`, `GetPositionMarginHistory`, `PositionRisk`, `ADLQuantile`, `ForceOrders`
-- **Account**: `Balance`, `Account`, `UserTrades`, `IncomeHistory`, `LeverageBracket`, `CommissionRate`
+- **Position config**: `ChangePositionMode`, `GetPositionMode`, `ChangeMultiAssetsMode`, `GetMultiAssetsMode`, `AssetExchange`, `ChangeLeverage`, `ChangeMarginType`, `ModifyIsolatedPositionMargin`, `GetPositionMarginHistory`, `PositionRisk`, `ADLQuantile`, `ForceOrders`
+- **Account**: `Balance`, `Account`, `AccountWithoutJoinMargin`, `UserTrades`, `IncomeHistory`, `LeverageBracket`, `CommissionRate`
 - **MMP**: `UpdateMMP`, `GetMMP`, `DeleteMMP`, `ResetMMP`
 - **Sub-accounts**: `Bind`, `Create`, `GetList`, `Update`, `Transfer`
-- **Agent / Builder**: `RegisterAndApproveAgent`, `ApproveAgent`, `GetBuilderUserTrades`, `GetBuilderApprovedUserList`
+- **Agent / Builder**: `RegisterAndApproveAgent`, `ApproveAgent`, `GetBuilderUserAccounts`, `GetBuilderUserOpenOrders`, `GetBuilderUserBalances`, `GetBuilderUserPositionRisk`, `GetBuilderUserCommissionRates`, `GetBuilderUserTrades`, `GetBuilderUserAllOrders`, `GetBuilderApprovedUserList`
 
 </details>
 
