@@ -353,6 +353,39 @@ type CommissionRateResponse struct {
 	TakerCommissionRate decimal.Decimal `json:"takerCommissionRate"`
 }
 
+// GetInviteeInfoService -- GET /fapi/v3/referral/inviteeInfo (USER_DATA)
+//
+// Checks whether address (EVM or Solana, matched case-insensitively) joined
+// through the caller's referral. The authenticated account is the referrer, so
+// an account can only query its own invitees.
+type GetInviteeInfoService struct {
+	c       *FuturesClient
+	address string
+}
+
+func (c *FuturesClient) NewGetInviteeInfoService(address string) *GetInviteeInfoService {
+	return &GetInviteeInfoService{c: c, address: address}
+}
+
+func (s *GetInviteeInfoService) Do(ctx context.Context) (*InviteeInfo, error) {
+	req := request.Get(ctx, s.c, "/fapi/v3/referral/inviteeInfo", map[string]string{"address": s.address}).WithSignature()
+	return request.Do[InviteeInfo](req)
+}
+
+// InviteeInfo is the response of GetInviteeInfoService. When IsInvitee is
+// false (invited by another account, no referrer, or never registered) only
+// WalletAddress is sent. A referral is valid for 365 days; an expired one
+// still reports IsInvitee, with ExpiredStatus set. FeePaid and YourRewards are
+// cumulative totals from a periodic aggregation job, not real-time.
+type InviteeInfo struct {
+	IsInvitee     bool            `json:"isInvitee"`
+	WalletAddress string          `json:"walletAddress"`
+	DateJoined    *time.Time      `json:"dateJoined,format:unixmilli"` // nil unless IsInvitee
+	FeePaid       decimal.Decimal `json:"feePaid"`
+	YourRewards   decimal.Decimal `json:"yourRewards"`
+	ExpiredStatus bool            `json:"expiredStatus"`
+}
+
 // UpdateMMPService -- POST /fapi/v3/mmp (USER_DATA)
 //
 // Market Maker Protection: when filled qty / notional / delta in a sliding

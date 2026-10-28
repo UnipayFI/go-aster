@@ -123,3 +123,42 @@ func TestGetAccountPaths(t *testing.T) {
 		}
 	}
 }
+
+// TestGetInviteeInfo checks the path and signed query of the invitee query and
+// decodes both documented responses: an invitee, and a non-invitee that only
+// carries walletAddress.
+func TestGetInviteeInfo(t *testing.T) {
+	for body, check := range map[string]func(*InviteeInfo) bool{
+		`{"isInvitee":true,"walletAddress":"0x1234...abcd","dateJoined":1759499712000,` +
+			`"feePaid":"4.82052705","yourRewards":"0.48205229","expiredStatus":false}`: func(got *InviteeInfo) bool {
+			return got.IsInvitee && got.WalletAddress == "0x1234...abcd" && got.DateJoined != nil &&
+				got.DateJoined.Equal(time.UnixMilli(1759499712000)) && got.FeePaid.String() == "4.82052705" &&
+				got.YourRewards.String() == "0.48205229" && !got.ExpiredStatus
+		},
+		`{"isInvitee":false,"walletAddress":"0x1234...abcd"}`: func(got *InviteeInfo) bool {
+			return !got.IsInvitee && got.WalletAddress == "0x1234...abcd" && got.DateJoined == nil &&
+				got.FeePaid.IsZero() && got.YourRewards.IsZero()
+		},
+	} {
+		var gotPath string
+		var gotQuery url.Values
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			gotPath, gotQuery = r.URL.Path, r.URL.Query()
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(body))
+		}))
+		c := NewFuturesClient(client.WithBaseURL(srv.URL), client.WithAuth(testUserAddress, testSignerKeyHex))
+		got, err := c.NewGetInviteeInfoService("0x1234...abcd").Do(context.Background())
+		srv.Close()
+		if err != nil {
+			t.Fatalf("Do(%s): %v", body, err)
+		}
+		if gotPath != "/fapi/v3/referral/inviteeInfo" || gotQuery.Get("signature") == "" {
+			t.Errorf("path = %q, signature = %q, want /fapi/v3/referral/inviteeInfo signed", gotPath, gotQuery.Get("signature"))
+		}
+		assertCovers(t, gotQuery, map[string]string{"address": "0x1234...abcd"})
+		if !check(got) {
+			t.Errorf("%s: decoded %+v", body, got)
+		}
+	}
+}
