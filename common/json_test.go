@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	jsonexp "github.com/go-json-experiment/json"
 	"github.com/shopspring/decimal"
 )
 
@@ -83,7 +82,7 @@ func TestDecodeUnixMatchesStandard(t *testing.T) {
 		if err := JSONUnmarshal([]byte(tt.in), &got); err != nil {
 			t.Fatalf("JSONUnmarshal(%s): %v", tt.in, err)
 		}
-		if err := json.Unmarshal([]byte(tt.in), &std, jsonexp.ExperimentalSupportFormatTag(true)); err != nil {
+		if err := json.Unmarshal([]byte(tt.in), &std, supportFormatTag{}); err != nil {
 			t.Fatalf("json.Unmarshal(%s): %v", tt.in, err)
 		}
 		for i, pair := range [][3]time.Time{

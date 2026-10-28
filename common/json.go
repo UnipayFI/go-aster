@@ -4,8 +4,6 @@ import (
 	"encoding/json/v2"
 	"fmt"
 	"time"
-
-	jsonexp "github.com/go-json-experiment/json"
 )
 
 // Aster sends timestamps as bare JSON numbers. Every time.Time field declares
@@ -20,6 +18,15 @@ var (
 	// provides the `format` tag support this codec relies on.
 	errJSONSupport = initJSON()
 )
+
+// supportFormatTag enables the experimental `format` tag support of Go 1.27's
+// encoding/json/v2. The standard library recognises any option that has an
+// ExperimentalSupportFormatTag method, and embedding json.Options supplies the
+// rest of the option method set, the same way
+// github.com/go-json-experiment/json implements ExperimentalSupportFormatTag.
+type supportFormatTag struct{ json.Options }
+
+func (supportFormatTag) ExperimentalSupportFormatTag() bool { return true }
 
 // JSONMarshal marshals v, honouring `format` tag options.
 func JSONMarshal(v any) ([]byte, error) {
@@ -47,7 +54,7 @@ func initJSON() (err error) {
 			err = fmt.Errorf("aster: encoding/json/v2 format tag support unavailable: %v", r)
 		}
 	}()
-	jsonOptions = jsonexp.ExperimentalSupportFormatTag(true)
+	jsonOptions = supportFormatTag{}
 
 	const payload = `{"t":1750034396998123}`
 	var probe struct {
