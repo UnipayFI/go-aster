@@ -18,6 +18,10 @@ import (
 // position in the list. The firstDriven*/secondDriven*/`*Trigger` fields wire
 // up the conditional logic (e.g. for OTO the second order is PLACE_ORDER-ed
 // when the first one is FILLED).
+//
+// On placeStrategyOrder, PegPriceType (a PegPriceType value) BBO-pegs a
+// LIMIT, STOP or TAKE_PROFIT leg; Price must then be "0", and the engine
+// resolves the real price at placement for LIMIT and at trigger otherwise.
 type StrategySubOrder struct {
 	StrategySubId   string `json:"strategySubId"`
 	SecurityType    string `json:"securityType"`
@@ -27,6 +31,7 @@ type StrategySubOrder struct {
 	Type            string `json:"type"`
 	Quantity        string `json:"quantity,omitempty"`
 	Price           string `json:"price,omitempty"`
+	PegPriceType    string `json:"pegPriceType,omitempty"`
 	StopPrice       string `json:"stopPrice,omitempty"`
 	TimeInForce     string `json:"timeInForce,omitempty"`
 	WorkingType     string `json:"workingType,omitempty"`
@@ -47,6 +52,10 @@ type StrategySubOrder struct {
 // PlaceStrategyOrderService -- POST /fapi/v3/placeStrategyOrder (TRADE)
 //
 // OTO and OCO require exactly 2 sub-orders; OTOCO requires exactly 3.
+//
+// When the entry leg is BBO-pegged or MARKET, a take-profit / stop-loss leg
+// that would trigger immediately is rejected by the strategy service with
+// HTTP 200 and FailureCode -4142, not an HTTP error, so check FailureCode.
 type PlaceStrategyOrderService struct {
 	c                *FuturesClient
 	strategyType     StrategyType
@@ -235,6 +244,8 @@ type StrategyOrder struct {
 	SubOrders        []StrategyOrderDetail `json:"subOrders"`
 }
 
+// StrategyOrderDetail is one leg of a StrategyOrder. A BBO-pegged leg reports
+// Price 0 and its PegPriceType; non-pegged legs leave PegPriceType empty.
 type StrategyOrderDetail struct {
 	StrategyId     int64           `json:"strategyId"`
 	OrderId        int64           `json:"orderId"`
@@ -257,6 +268,7 @@ type StrategyOrderDetail struct {
 	ReduceOnly     bool            `json:"reduceOnly"`
 	ClosePosition  bool            `json:"closePosition"`
 	Price          decimal.Decimal `json:"price"`
+	PegPriceType   PegPriceType    `json:"pegPriceType"`
 	AvgPrice       decimal.Decimal `json:"avgPrice"`
 	PriceProtect   bool            `json:"priceProtect"`
 	StopPrice      decimal.Decimal `json:"stopPrice"`

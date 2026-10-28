@@ -135,12 +135,22 @@ const (
 
 // PegPriceType selects the BBO reference for a BBO-pegged order. The engine
 // resolves the actual price from the order book BBO: at placement for a LIMIT
-// order, and at trigger for a STOP / TAKE_PROFIT order.
+// order, and at trigger for a STOP / TAKE_PROFIT order. A plain order only
+// accepts PegCounterparty1 and PegQueue1; strategy order legs accept every
+// level.
 type PegPriceType string
 
 const (
-	PegCounterparty1 PegPriceType = "COUNTERPARTY_1"
-	PegQueue1        PegPriceType = "QUEUE_1"
+	PegCounterparty1  PegPriceType = "COUNTERPARTY_1"
+	PegCounterparty3  PegPriceType = "COUNTERPARTY_3"
+	PegCounterparty5  PegPriceType = "COUNTERPARTY_5"
+	PegCounterparty10 PegPriceType = "COUNTERPARTY_10"
+	PegCounterparty20 PegPriceType = "COUNTERPARTY_20"
+	PegQueue1         PegPriceType = "QUEUE_1"
+	PegQueue3         PegPriceType = "QUEUE_3"
+	PegQueue5         PegPriceType = "QUEUE_5"
+	PegQueue10        PegPriceType = "QUEUE_10"
+	PegQueue20        PegPriceType = "QUEUE_20"
 )
 
 // QuantityUnit chooses whether a chase order's quantity is denominated in the
