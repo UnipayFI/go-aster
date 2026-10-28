@@ -160,7 +160,9 @@ func (s *PlaceOrderService) Do(ctx context.Context) (*Order, error) {
 //
 // Only LIMIT orders can be modified, and only quantity / price, both of which
 // must be set. Either orderId or origClientOrderId must be set; orderId wins
-// if both.
+// if both. A successful modification resets the order's time priority, moving
+// it to the back of the queue at its price level, even when only the quantity
+// changes.
 type ModifyOrderService struct {
 	c      *FuturesClient
 	params map[string]string
@@ -367,8 +369,9 @@ type BatchModifyOrderItem struct {
 // ModifyMultipleOrdersService -- PUT /fapi/v3/batchOrders (TRADE)
 //
 // Modifies up to 5 orders in one call (10 for market-maker whitelisted
-// accounts). Per-order rules match ModifyOrderService: LIMIT orders only, and
-// at most 10000 modifications per individual order.
+// accounts). Per-order rules match ModifyOrderService: LIMIT orders only, at
+// most 10000 modifications per individual order, and each modified order
+// loses its time priority.
 //
 // Orders are processed concurrently and independently -- there is no atomic
 // guarantee, so one entry failing leaves the others untouched -- but the
