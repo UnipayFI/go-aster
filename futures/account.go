@@ -2,8 +2,10 @@ package futures
 
 import (
 	"context"
+	"encoding/json/jsontext"
 	"encoding/json/v2"
 	"errors"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -286,6 +288,91 @@ type incomeRecordQuoted struct {
 	Time       time.Time       `json:"time,format:unixmilli"`
 	TranID     int64           `json:"tranId,string"`
 	TradeID    string          `json:"tradeId"`
+}
+
+// GetIncomeHistoryPageService -- GET /fapi/v3/incomePage (USER_DATA)
+//
+// Pages through income history sorted by time ascending. The time span is
+// unlimited, but page*limit may not exceed 100000; narrow the window to go
+// further. Without startTime and endTime the recent 7 days are returned; with
+// only endTime, everything up to it. endTime otherwise defaults to the time of
+// each request, so set it when paging to keep rows from shifting between pages.
+type GetIncomeHistoryPageService struct {
+	c      *FuturesClient
+	params map[string]string
+}
+
+func (c *FuturesClient) NewGetIncomeHistoryPageService() *GetIncomeHistoryPageService {
+	return &GetIncomeHistoryPageService{c: c, params: map[string]string{}}
+}
+
+func (s *GetIncomeHistoryPageService) SetSymbol(symbol string) *GetIncomeHistoryPageService {
+	s.params["symbol"] = symbol
+	return s
+}
+
+// SetIncomeType filters by income type. TRANSFER and WELCOME_BONUS cannot be
+// combined with a symbol.
+func (s *GetIncomeHistoryPageService) SetIncomeType(t IncomeType) *GetIncomeHistoryPageService {
+	s.params["incomeType"] = string(t)
+	return s
+}
+
+func (s *GetIncomeHistoryPageService) SetStartTime(t time.Time) *GetIncomeHistoryPageService {
+	s.params["startTime"] = strconv.FormatInt(t.UnixMilli(), 10)
+	return s
+}
+
+func (s *GetIncomeHistoryPageService) SetEndTime(t time.Time) *GetIncomeHistoryPageService {
+	s.params["endTime"] = strconv.FormatInt(t.UnixMilli(), 10)
+	return s
+}
+
+// SetPage sets the pagination page number (default 1).
+func (s *GetIncomeHistoryPageService) SetPage(page int) *GetIncomeHistoryPageService {
+	s.params["page"] = strconv.Itoa(page)
+	return s
+}
+
+// SetLimit sets the number of records per page (default 100, maximum 1000).
+func (s *GetIncomeHistoryPageService) SetLimit(limit int) *GetIncomeHistoryPageService {
+	s.params["limit"] = strconv.Itoa(limit)
+	return s
+}
+
+func (s *GetIncomeHistoryPageService) Do(ctx context.Context) (*IncomeHistoryPage, error) {
+	req := request.Get(ctx, s.c, "/fapi/v3/incomePage", s.params).WithSignature()
+	return request.DoDecode(req, decodeIncomeHistoryPage)
+}
+
+// IncomeHistoryPage is the response of GetIncomeHistoryPageService. Total
+// counts every matching record in the window; a page past the end has no Rows.
+type IncomeHistoryPage struct {
+	Total   int64          `json:"total"`
+	Page    int            `json:"page"`
+	Limit   int            `json:"limit"`
+	HasMore bool           `json:"hasMore"`
+	Rows    []IncomeRecord `json:"rows"`
+}
+
+// decodeIncomeHistoryPage decodes an income page, leaving its rows, which
+// share the /fapi/v3/income record format, to decodeIncomeRecords.
+func decodeIncomeHistoryPage(body []byte) (*IncomeHistoryPage, error) {
+	var page struct {
+		IncomeHistoryPage
+		Rows jsontext.Value `json:"rows"`
+	}
+	if err := common.JSONUnmarshal(body, &page); err != nil {
+		return nil, err
+	}
+	if len(page.Rows) > 0 {
+		rows, err := decodeIncomeRecords(page.Rows)
+		if err != nil {
+			return nil, fmt.Errorf("rows: %w", err)
+		}
+		page.IncomeHistoryPage.Rows = rows
+	}
+	return &page.IncomeHistoryPage, nil
 }
 
 // GetLeverageBracketService -- GET /fapi/v3/leverageBrackets

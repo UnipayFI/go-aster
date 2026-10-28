@@ -162,3 +162,61 @@ func TestGetInviteeInfo(t *testing.T) {
 		}
 	}
 }
+
+// incomePageBody is the response sample from the Get Income History With
+// Pagination doc, which leaves tranId bare.
+const incomePageBody = `{"total":5823,"page":2,"limit":1000,"hasMore":true,"rows":[{"symbol":"BTCUSDT",` +
+	`"incomeType":"FUNDING_FEE","income":"-0.01230000","asset":"USDT","info":"","time":1759996800000,` +
+	`"tranId":9689322392,"tradeId":""}]}`
+
+// TestGetIncomeHistoryPage checks the path and query of the paginated income
+// query, and that its rows decode like /fapi/v3/income records, tranId quoted
+// or not.
+func TestGetIncomeHistoryPage(t *testing.T) {
+	start, end := time.UnixMilli(1759900000000), time.UnixMilli(1760000000000)
+	for _, body := range []string{incomePageBody, strings.Replace(incomePageBody, `9689322392`, `"9689322392"`, 1)} {
+		var gotPath string
+		var gotQuery url.Values
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			gotPath, gotQuery = r.URL.Path, r.URL.Query()
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(body))
+		}))
+		c := NewFuturesClient(client.WithBaseURL(srv.URL), client.WithAuth(testUserAddress, testSignerKeyHex))
+		got, err := c.NewGetIncomeHistoryPageService().SetSymbol("BTCUSDT").SetIncomeType(IncomeFundingFee).
+			SetStartTime(start).SetEndTime(end).SetPage(2).SetLimit(1000).Do(context.Background())
+		srv.Close()
+		if err != nil {
+			t.Fatalf("Do(%s): %v", body, err)
+		}
+		if gotPath != "/fapi/v3/incomePage" || gotQuery.Get("signature") == "" {
+			t.Errorf("path = %q, signature = %q, want /fapi/v3/incomePage signed", gotPath, gotQuery.Get("signature"))
+		}
+		assertCovers(t, gotQuery, map[string]string{"symbol": "BTCUSDT", "incomeType": "FUNDING_FEE",
+			"startTime": "1759900000000", "endTime": "1760000000000", "page": "2", "limit": "1000"})
+		if got.Total != 5823 || got.Page != 2 || got.Limit != 1000 || !got.HasMore || len(got.Rows) != 1 {
+			t.Fatalf("%s: decoded %+v", body, got)
+		}
+		if r := got.Rows[0]; r.TranID != 9689322392 || r.IncomeType != IncomeFundingFee || r.Income.String() != "-0.0123" ||
+			!r.Time.Equal(time.UnixMilli(1759996800000)) {
+			t.Errorf("%s: row = %+v", body, r)
+		}
+	}
+
+	got, err := newTestClient(t, `{"total":5823,"page":9,"limit":1000,"hasMore":false,"rows":[]}`).
+		NewGetIncomeHistoryPageService().Do(context.Background())
+	if err != nil || got.Total != 5823 || got.HasMore || len(got.Rows) != 0 {
+		t.Errorf("page past the end: got %+v, %v", got, err)
+	}
+
+	for body, want := range map[string]string{
+		`{"total":"x","rows":[]}`:                        `/total`,
+		`{"total":1,"rows":[{"tranId":"abc"}]}`:          `/0/tranId`,
+		`{"total":1,"rows":[{"tranId":5,"time":"bad"}]}`: `/0/time`,
+	} {
+		_, err := newTestClient(t, body).NewGetIncomeHistoryPageService().Do(context.Background())
+		if err == nil || !strings.Contains(err.Error(), want) {
+			t.Errorf("%s: err = %v, want it to point at %s", body, err, want)
+		}
+	}
+}
