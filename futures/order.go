@@ -129,18 +129,11 @@ func (s *PlaceOrderService) SetNewOrderRespType(r ResponseType) *PlaceOrderServi
 	return s
 }
 
-// SetPegPriceType turns a LIMIT order into a BBO-pegged order; the engine
-// resolves the actual price from the order book at trigger time using the
-// chosen BBO level plus the pegOffset.
+// SetPegPriceType makes the order BBO-pegged: the engine resolves its price
+// from the order book BBO, at placement for a LIMIT order and at trigger for a
+// STOP / TAKE_PROFIT order.
 func (s *PlaceOrderService) SetPegPriceType(p PegPriceType) *PlaceOrderService {
 	s.params["pegPriceType"] = string(p)
-	return s
-}
-
-// SetPegOffset sets the signed offset from the BBO. BUY orders use a
-// non-positive value, SELL a non-negative value; must be a tickSize multiple.
-func (s *PlaceOrderService) SetPegOffset(o decimal.Decimal) *PlaceOrderService {
-	s.params["pegOffset"] = o.String()
 	return s
 }
 

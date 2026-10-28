@@ -133,9 +133,9 @@ const (
 	STPExpireBoth  STPMode = "EXPIRE_BOTH"
 )
 
-// PegPriceType selects the BBO reference for a BBO-pegged LIMIT order. The
-// engine resolves the actual price from the order book at trigger time using
-// the chosen BBO level plus pegOffset.
+// PegPriceType selects the BBO reference for a BBO-pegged order. The engine
+// resolves the actual price from the order book BBO: at placement for a LIMIT
+// order, and at trigger for a STOP / TAKE_PROFIT order.
 type PegPriceType string
 
 const (
