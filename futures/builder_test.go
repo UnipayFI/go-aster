@@ -40,6 +40,8 @@ const (
 	builderTradeRow = `{"tradeId":1,"insertTime":1751500000000,"symbol":"BTCUSDT","positionSide":"BOTH",` +
 		`"price":"78190.5","qty":"0.0002","side":"SELL","fee":"-0.07819010","userAddress":"0x1234...abcd",` +
 		`"builderFee":"0.01"}`
+	builderFeeRow = `{"tradeId":698759,"insertTime":1751500000000,"orderId":25851813,"symbol":"BTCUSDT",` +
+		`"feeAsset":"USDT","marginAsset":"USDT","builderFee":"0.00050000","userAddress":"0x1234...abcd"}`
 	builderOrderRow = `{"avgPrice":"0.00000","clientOrderId":"abc","cumQuote":"0","executedQty":"0",` +
 		`"orderId":1917641,"origQty":"0.40","origType":"TRAILING_STOP_MARKET","price":"0","reduceOnly":false,` +
 		`"side":"BUY","positionSide":"SHORT","status":"NEW","stopPrice":"9300","closePosition":false,` +
@@ -161,6 +163,26 @@ func TestBuilderUserQueries(t *testing.T) {
 				p := got.(*BuilderUserTrades)
 				checkBuilderErrors(t, p.Errors)
 				if r := p.Rows[0]; r.Fee.String() != "-0.0781901" || r.UserAddress != "0x1234...abcd" {
+					t.Errorf("row = %+v", r)
+				}
+			},
+		},
+		{
+			path: "/fapi/v3/builder/userCommissions",
+			row:  builderFeeRow,
+			do: func(c *FuturesClient) (any, error) {
+				return c.NewGetBuilderUserCommissionsService().SetUserAddresses("0xa", "0xb").SetStartTime(start).
+					SetEndTime(end).SetPage(2).SetLimit(1000).Do(context.Background())
+			},
+			want: map[string]string{"userAddresses": "0xa,0xb", "startTime": "1751400000000",
+				"endTime": "1751500000000", "page": "2", "limit": "1000"},
+			check: func(t *testing.T, got any) {
+				p := got.(*BuilderUserCommissions)
+				checkBuilderErrors(t, p.Errors)
+				r := p.Rows[0]
+				if r.TradeID != 698759 || r.OrderID != 25851813 || r.MarginAsset != "USDT" ||
+					r.BuilderFee.String() != "0.0005" || r.UserAddress != "0x1234...abcd" ||
+					!r.InsertTime.Equal(time.UnixMilli(1751500000000)) {
 					t.Errorf("row = %+v", r)
 				}
 			},

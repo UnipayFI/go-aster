@@ -450,6 +450,82 @@ type BuilderUserTrade struct {
 	BuilderFee     decimal.Decimal `json:"builderFee"`
 }
 
+// GetBuilderUserCommissionsService -- GET /fapi/v3/builder/userCommissions (USER_DATA)
+//
+// Queries the paginated builder fees earned on trades of users trading under
+// the caller's builder code. It covers the same trades as
+// GetBuilderUserTradesService, with the same time window, ordering and
+// userAddresses rules, but returns only the fee fields, and users' privacy mode
+// does not apply.
+type GetBuilderUserCommissionsService struct {
+	c      *FuturesClient
+	params map[string]string
+}
+
+func (c *FuturesClient) NewGetBuilderUserCommissionsService() *GetBuilderUserCommissionsService {
+	return &GetBuilderUserCommissionsService{c: c, params: map[string]string{}}
+}
+
+// SetUserAddresses only returns fees on trades of these users (at most 50).
+// Each must have approved the caller as its builder; any other address is
+// reported in Errors instead. When unset, every bound user is covered.
+func (s *GetBuilderUserCommissionsService) SetUserAddresses(addresses ...string) *GetBuilderUserCommissionsService {
+	s.params["userAddresses"] = strings.Join(addresses, ",")
+	return s
+}
+
+func (s *GetBuilderUserCommissionsService) SetStartTime(t time.Time) *GetBuilderUserCommissionsService {
+	s.params["startTime"] = strconv.FormatInt(t.UnixMilli(), 10)
+	return s
+}
+
+func (s *GetBuilderUserCommissionsService) SetEndTime(t time.Time) *GetBuilderUserCommissionsService {
+	s.params["endTime"] = strconv.FormatInt(t.UnixMilli(), 10)
+	return s
+}
+
+// SetPage sets the pagination page number (default 1).
+func (s *GetBuilderUserCommissionsService) SetPage(page int) *GetBuilderUserCommissionsService {
+	s.params["page"] = strconv.Itoa(page)
+	return s
+}
+
+// SetLimit sets the number of trades per page (default 50, maximum 1000).
+func (s *GetBuilderUserCommissionsService) SetLimit(limit int) *GetBuilderUserCommissionsService {
+	s.params["limit"] = strconv.Itoa(limit)
+	return s
+}
+
+func (s *GetBuilderUserCommissionsService) Do(ctx context.Context) (*BuilderUserCommissions, error) {
+	req := request.Get(ctx, s.c, "/fapi/v3/builder/userCommissions", s.params).WithSignature()
+	return request.Do[BuilderUserCommissions](req)
+}
+
+// BuilderUserCommissions is the paginated response of
+// GetBuilderUserCommissionsService.
+type BuilderUserCommissions struct {
+	Total       int64                   `json:"total"`
+	CurrentPage int                     `json:"currentPage"`
+	TotalPages  int                     `json:"totalPages"`
+	PageSize    int                     `json:"pageSize"`
+	HasMore     bool                    `json:"hasMore"`
+	Rows        []BuilderUserCommission `json:"rows"`
+	Errors      []BuilderUserError      `json:"errors"`
+}
+
+// BuilderUserCommission is the builder fee earned on one trade of a user under
+// the caller's builder code; BuilderFee is 0 when none was charged.
+type BuilderUserCommission struct {
+	TradeID     int64           `json:"tradeId"`
+	InsertTime  time.Time       `json:"insertTime,format:unixmilli"`
+	OrderID     int64           `json:"orderId"`
+	Symbol      string          `json:"symbol"`
+	FeeAsset    string          `json:"feeAsset"`
+	MarginAsset string          `json:"marginAsset"`
+	BuilderFee  decimal.Decimal `json:"builderFee"`
+	UserAddress string          `json:"userAddress"`
+}
+
 // GetBuilderUserAllOrdersService -- GET /fapi/v3/builder/userAllOrders (USER_DATA)
 //
 // Queries the paginated order history (active, canceled or filled) of users
