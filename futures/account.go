@@ -419,6 +419,61 @@ type Bracket struct {
 	Cum              decimal.Decimal `json:"cum"`
 }
 
+// UnmarshalJSONFrom decodes a Bracket, accepting `bracket` and
+// `initialLeverage` as either JSON numbers or numeric strings: the live
+// /fapi/v3/leverageBrackets endpoint sends `bracket` as a string (e.g. "1")
+// while the docs show a number.
+func (b *Bracket) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
+	type plain Bracket
+	var raw struct {
+		plain
+		Bracket         flexInt `json:"bracket"`
+		InitialLeverage flexInt `json:"initialLeverage"`
+	}
+	if err := json.UnmarshalDecode(dec, &raw); err != nil {
+		return err
+	}
+	*b = Bracket(raw.plain)
+	b.Bracket = int(raw.Bracket)
+	b.InitialLeverage = int(raw.InitialLeverage)
+	return nil
+}
+
+// flexInt decodes an integer sent either as a JSON number or as a numeric
+// string; an empty string decodes as 0.
+type flexInt int
+
+func (n *flexInt) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
+	val, err := dec.ReadValue()
+	if err != nil {
+		return err
+	}
+	var text string
+	switch val.Kind() {
+	case '"':
+		if err := json.Unmarshal(val, &text); err != nil {
+			return err
+		}
+	case '0':
+		text = string(val)
+	case 'n':
+		*n = 0
+		return nil
+	default:
+		return fmt.Errorf("aster: cannot decode %s as integer", val)
+	}
+	if text == "" {
+		*n = 0
+		return nil
+	}
+	v, err := strconv.Atoi(text)
+	if err != nil {
+		return fmt.Errorf("aster: cannot decode %q as integer: %w", text, err)
+	}
+	*n = flexInt(v)
+	return nil
+}
+
 // GetCommissionRateService -- GET /fapi/v3/commissionRate (USER_DATA)
 type GetCommissionRateService struct {
 	c      *FuturesClient
