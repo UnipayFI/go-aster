@@ -19,9 +19,11 @@ import (
 // up the conditional logic (e.g. for OTO the second order is PLACE_ORDER-ed
 // when the first one is FILLED).
 //
-// On placeStrategyOrder, PegPriceType (a PegPriceType value) BBO-pegs a
-// LIMIT, STOP or TAKE_PROFIT leg; Price must then be "0", and the engine
-// resolves the real price at placement for LIMIT and at trigger otherwise.
+// Price is the limit price at which a LIMIT, STOP or TAKE_PROFIT leg is placed
+// once triggered, while StopPrice is the trigger price itself. On
+// placeStrategyOrder, PegPriceType (a PegPriceType value) BBO-pegs a LIMIT,
+// STOP or TAKE_PROFIT leg; Price must then be "0", and the engine resolves the
+// real price at placement for LIMIT and at trigger otherwise.
 type StrategySubOrder struct {
 	StrategySubId   string `json:"strategySubId"`
 	SecurityType    string `json:"securityType"`
