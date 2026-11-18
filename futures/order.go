@@ -222,6 +222,13 @@ func (s *ModifyOrderService) Do(ctx context.Context) (*Order, error) {
 //
 // Note: chaseOffsetType only supports ABSOLUTE for now; PERCENTAGE is rejected
 // with UNSUPPORTED_OPERATION. maxChaseOffsetType supports both.
+//
+// When quantityUnit is QuantityUnitQuote, the quote amount is converted to a
+// base quantity at the current mark price and rounded down to the symbol's
+// stepSize, then checked against minQty/maxQty and (for entry orders)
+// post-rounding minNotional -- rounding down can push a borderline quote amount
+// below minNotional. If mark price is unavailable, the order fails with -4125
+// (STRATEGY_ORDER_TRIGGER_FAILURE).
 type PlaceChaseOrderService struct {
 	c      *FuturesClient
 	params map[string]string
