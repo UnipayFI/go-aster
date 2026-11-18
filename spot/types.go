@@ -78,9 +78,11 @@ type TransactionType string
 const (
 	TransactionTradeTarget          TransactionType = "TRADE_TARGET"
 	TransactionTradeSource          TransactionType = "TRADE_SOURCE"
-	TransactionTransferSpotToFuture TransactionType = "TRANSFER_SPOT_TO_FUTURE"
-	TransactionTransferFutureToSpot TransactionType = "TRANSFER_FUTURE_TO_SPOT"
-	TransactionTransferSpotToSpot   TransactionType = "TRANSFER_SPOT_TO_SPOT"
+	TransactionDeposit              TransactionType = "DEPOSIT"
+	TransactionWithdraw             TransactionType = "WITHDRAW"
+	TransactionTransferSpotToFuture TransactionType = "TRANSFER_SPOT_TO_FUTURE" // no longer listed in the docs
+	TransactionTransferFutureToSpot TransactionType = "TRANSFER_FUTURE_TO_SPOT" // no longer listed in the docs
+	TransactionTransferSpotToSpot   TransactionType = "TRANSFER_SPOT_TO_SPOT"   // no longer listed in the docs
 	TransactionAirdrop              TransactionType = "AIRDROP"
 	TransactionDividend             TransactionType = "DIVIDEND"
 	TransactionTransferRefund       TransactionType = "TRANSFER_REFUND"

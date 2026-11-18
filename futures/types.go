@@ -95,11 +95,13 @@ const (
 	AutoCloseADL         AutoCloseType = "ADL"
 )
 
-// IncomeType filters /fapi/v3/income.
+// IncomeType filters /fapi/v3/income and /fapi/v3/incomePage.
 type IncomeType string
 
 const (
 	IncomeTransfer                IncomeType = "TRANSFER"
+	IncomeWithdraw                IncomeType = "WITHDRAW"
+	IncomeDeposit                 IncomeType = "DEPOSIT"
 	IncomeWelcomeBonus            IncomeType = "WELCOME_BONUS"
 	IncomeRealizedPNL             IncomeType = "REALIZED_PNL"
 	IncomeFundingFee              IncomeType = "FUNDING_FEE"
