@@ -2,7 +2,7 @@
 // served from its own host rather than the spot or futures gateways. It covers
 // the on-chain side of an Aster account: deposit addresses, withdrawals to
 // EVM/Solana addresses, wallet transfers between the spot and perp accounts,
-// and withdrawal limit/fee queries.
+// batch transfers to Aster-Chain addresses, and withdrawal limit/fee queries.
 package chain
 
 import (
