@@ -28,6 +28,7 @@ type Option struct {
 	network             asterCommon.Network
 	baseURL             string
 	recvWindow          int64
+	nonceWindow         int64
 	logger              log.Logger
 	signFn              SignFn
 	client              *resty.Client
@@ -109,6 +110,20 @@ func WithSignRequestFn(signFn SignFn) Options {
 func WithRecvWindow(recvWindow int64) Options {
 	return func(opt *Option) {
 		opt.recvWindow = recvWindow
+	}
+}
+
+// WithNonceWindow sets the default optional sequencer deadline in milliseconds
+// (valid range 1–60000), counted from the time encoded in the request's nonce.
+// When positive, Request.WithSignature signs nonceWindow into V3 requests; if
+// the sequencer has not processed the request by nonce + nonceWindow, Aster
+// rejects it with -4227 and never includes it in blocks. Zero (the default)
+// omits nonceWindow. Guarded cancel requests replay an older order's nonce, so
+// they ignore this client default unless SetNonceWindow is called on the
+// service itself.
+func WithNonceWindow(nonceWindowMs int64) Options {
+	return func(opt *Option) {
+		opt.nonceWindow = nonceWindowMs
 	}
 }
 

@@ -201,3 +201,90 @@ func TestRequestParams(t *testing.T) {
 		})
 	}
 }
+
+// TestNonceWindowParams checks client-wide and per-service nonceWindow on
+// futures order and guarded-cancel requests.
+func TestNonceWindowParams(t *testing.T) {
+	ctx := context.Background()
+	for _, tt := range []struct {
+		name   string
+		opts   []client.Options
+		body   string
+		do     func(*FuturesClient) error
+		want   map[string]string
+		absent []string
+	}{
+		{
+			name: "client default on place order",
+			opts: []client.Options{client.WithNonceWindow(5000)},
+			body: docNewOrderBody,
+			do: func(c *FuturesClient) error {
+				_, err := c.NewPlaceOrderService("BTCUSDT", SideBuy, OrderTypeLimit).Do(ctx)
+				return err
+			},
+			want: map[string]string{"nonceWindow": "5000"},
+		},
+		{
+			name: "service override on batch orders",
+			opts: []client.Options{client.WithNonceWindow(5000)},
+			body: `[]`,
+			do: func(c *FuturesClient) error {
+				_, err := c.NewBatchOrdersService().SetOrders([]BatchOrderItem{{Symbol: "BTCUSDT", Side: "BUY", Type: "MARKET", Quantity: "1"}}).
+					SetNonceWindow(1500).Do(ctx)
+				return err
+			},
+			want: map[string]string{"nonceWindow": "1500"},
+		},
+		{
+			name: "service clear on cancel order",
+			opts: []client.Options{client.WithNonceWindow(5000)},
+			body: docNewOrderBody,
+			do: func(c *FuturesClient) error {
+				_, err := c.NewCancelOrderService("BTCUSDT").SetOrderId(1).SetNonceWindow(0).Do(ctx)
+				return err
+			},
+			absent: []string{"nonceWindow"},
+		},
+		{
+			name: "guarded cancel skips client default",
+			opts: []client.Options{client.WithNonceWindow(5000)},
+			body: docNewOrderBody,
+			do: func(c *FuturesClient) error {
+				_, err := c.NewGuardedCancelOrderService("BTCUSDT", 1748310859508867).SetOrderId(1).Do(ctx)
+				return err
+			},
+			want:   map[string]string{"nonce": "1748310859508867"},
+			absent: []string{"nonceWindow"},
+		},
+		{
+			name: "guarded cancel explicit nonceWindow",
+			opts: []client.Options{client.WithNonceWindow(5000)},
+			body: docNewOrderBody,
+			do: func(c *FuturesClient) error {
+				_, err := c.NewGuardedCancelOrderService("BTCUSDT", 1748310859508867).SetOrderId(1).SetNonceWindow(10000).Do(ctx)
+				return err
+			},
+			want: map[string]string{"nonce": "1748310859508867", "nonceWindow": "10000"},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			var gotQuery url.Values
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				gotQuery = r.URL.Query()
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write([]byte(tt.body))
+			}))
+			defer srv.Close()
+			opts := append([]client.Options{client.WithBaseURL(srv.URL), client.WithAuth(testUserAddress, testSignerKeyHex)}, tt.opts...)
+			if err := tt.do(NewFuturesClient(opts...)); err != nil {
+				t.Fatalf("Do: %v", err)
+			}
+			assertCovers(t, gotQuery, tt.want)
+			for _, key := range tt.absent {
+				if gotQuery.Has(key) {
+					t.Errorf("query has %q = %q, want it left out", key, gotQuery.Get(key))
+				}
+			}
+		})
+	}
+}

@@ -92,6 +92,13 @@ func (s *PlaceOrderService) SetFeeRate(rate decimal.Decimal) *PlaceOrderService 
 	return s
 }
 
+// SetNonceWindow sets (or, when ms <= 0, clears) the optional sequencer
+// deadline in milliseconds (1–60000) counted from the request's nonce.
+func (s *PlaceOrderService) SetNonceWindow(ms int64) *PlaceOrderService {
+	setNonceWindow(s.params, ms)
+	return s
+}
+
 func (s *PlaceOrderService) Do(ctx context.Context) (*OrderResponse, error) {
 	req := request.Post(s.c, ctx, "/api/v3/order", s.params).WithSignature()
 	return request.Do[OrderResponse](req)
@@ -114,6 +121,13 @@ func (s *CancelOrderService) SetOrderId(id int64) *CancelOrderService {
 
 func (s *CancelOrderService) SetOrigClientOrderId(id string) *CancelOrderService {
 	s.params["origClientOrderId"] = id
+	return s
+}
+
+// SetNonceWindow sets (or, when ms <= 0, clears) the optional sequencer
+// deadline in milliseconds (1–60000) counted from the request's nonce.
+func (s *CancelOrderService) SetNonceWindow(ms int64) *CancelOrderService {
+	setNonceWindow(s.params, ms)
 	return s
 }
 
@@ -221,6 +235,13 @@ func (s *CancelAllOpenOrdersService) SetOrigClientOrderIdList(ids []string) *Can
 	return s
 }
 
+// SetNonceWindow sets (or, when ms <= 0, clears) the optional sequencer
+// deadline in milliseconds (1–60000) counted from the request's nonce.
+func (s *CancelAllOpenOrdersService) SetNonceWindow(ms int64) *CancelAllOpenOrdersService {
+	setNonceWindow(s.params, ms)
+	return s
+}
+
 func (s *CancelAllOpenOrdersService) Do(ctx context.Context) (*CancelAllOpenOrdersResponse, error) {
 	req := request.Delete(ctx, s.c, "/api/v3/allOpenOrders", s.params).WithSignature()
 	return request.Do[CancelAllOpenOrdersResponse](req)
@@ -323,4 +344,12 @@ type TransactionRecord struct {
 	BalanceInfo  string          `json:"balanceInfo"`
 	Time         time.Time       `json:"time,format:unixmilli"`
 	Type         TransactionType `json:"type"`
+}
+
+func setNonceWindow(params map[string]string, ms int64) {
+	if ms <= 0 {
+		params["nonceWindow"] = ""
+		return
+	}
+	params["nonceWindow"] = strconv.FormatInt(ms, 10)
 }

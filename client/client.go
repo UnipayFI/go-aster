@@ -51,6 +51,7 @@ type Client struct {
 	privateKeyHex    string
 	chainID          int64
 	recvWindow       int64
+	nonceWindow      int64
 	logger           log.Logger
 	signFn           SignFn
 	timeOffsetMs     int64
@@ -92,6 +93,7 @@ func NewClient(product Product, options ...Options) *Client {
 		signerAddress: opt.signerAddress,
 		chainID:       opt.network.ChainID(),
 		recvWindow:    opt.recvWindow,
+		nonceWindow:   opt.nonceWindow,
 		logger:        opt.logger,
 		signFn:        opt.signFn,
 		timeOffsetMs:  opt.timeOffsetMs,
@@ -155,6 +157,14 @@ func (c *Client) GetChainID() int64 {
 
 func (c *Client) GetRecvWindow() int64 {
 	return c.recvWindow
+}
+
+func (c *Client) GetNonceWindow() int64 {
+	return c.nonceWindow
+}
+
+func (c *Client) SetNonceWindow(nonceWindowMs int64) {
+	c.nonceWindow = nonceWindowMs
 }
 
 func (c *Client) GetLogger() log.Logger {

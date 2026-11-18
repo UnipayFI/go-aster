@@ -122,6 +122,13 @@ func (c *SpotClient) NewPerpSpotTransferService(asset string, amount decimal.Dec
 	}}
 }
 
+// SetNonceWindow sets (or, when ms <= 0, clears) the optional sequencer
+// deadline in milliseconds (1–60000) counted from the request's nonce.
+func (s *PerpSpotTransferService) SetNonceWindow(ms int64) *PerpSpotTransferService {
+	setNonceWindow(s.params, ms)
+	return s
+}
+
 func (s *PerpSpotTransferService) Do(ctx context.Context) (*TransferResponse, error) {
 	req := request.Post(s.c, ctx, "/api/v3/asset/wallet/transfer", s.params).WithSignature()
 	return request.Do[TransferResponse](req)

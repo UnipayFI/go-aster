@@ -144,6 +144,13 @@ func (s *PlaceOrderService) SetSTPMode(m STPMode) *PlaceOrderService {
 	return s
 }
 
+// SetNonceWindow sets (or, when ms <= 0, clears) the optional sequencer
+// deadline in milliseconds (1–60000) counted from the request's nonce.
+func (s *PlaceOrderService) SetNonceWindow(ms int64) *PlaceOrderService {
+	setNonceWindow(s.params, ms)
+	return s
+}
+
 func (s *PlaceOrderService) Do(ctx context.Context) (*Order, error) {
 	req := request.Post(s.c, ctx, "/fapi/v3/order", s.params).WithSignature()
 	return request.Do[Order](req)
@@ -189,6 +196,13 @@ func (s *ModifyOrderService) SetQuantity(q decimal.Decimal) *ModifyOrderService 
 
 func (s *ModifyOrderService) SetPrice(p decimal.Decimal) *ModifyOrderService {
 	s.params["price"] = p.String()
+	return s
+}
+
+// SetNonceWindow sets (or, when ms <= 0, clears) the optional sequencer
+// deadline in milliseconds (1–60000) counted from the request's nonce.
+func (s *ModifyOrderService) SetNonceWindow(ms int64) *ModifyOrderService {
+	setNonceWindow(s.params, ms)
 	return s
 }
 
@@ -262,6 +276,13 @@ func (s *PlaceChaseOrderService) SetClientStrategyId(id string) *PlaceChaseOrder
 	return s
 }
 
+// SetNonceWindow sets (or, when ms <= 0, clears) the optional sequencer
+// deadline in milliseconds (1–60000) counted from the request's nonce.
+func (s *PlaceChaseOrderService) SetNonceWindow(ms int64) *PlaceChaseOrderService {
+	setNonceWindow(s.params, ms)
+	return s
+}
+
 func (s *PlaceChaseOrderService) Do(ctx context.Context) (*ChaseOrder, error) {
 	req := request.Post(s.c, ctx, "/fapi/v3/chase", s.params).WithSignature()
 	return request.Do[ChaseOrder](req)
@@ -319,8 +340,9 @@ type BatchOrderItem struct {
 // Each list entry returns either an Order or {code,msg} error. Inspect the
 // raw responses with json.RawMessage if you need to handle partial failures.
 type BatchOrdersService struct {
-	c      *FuturesClient
-	orders []BatchOrderItem
+	c           *FuturesClient
+	orders      []BatchOrderItem
+	nonceWindow *int64
 }
 
 func (c *FuturesClient) NewBatchOrdersService() *BatchOrdersService {
@@ -332,6 +354,13 @@ func (s *BatchOrdersService) SetOrders(orders []BatchOrderItem) *BatchOrdersServ
 	return s
 }
 
+// SetNonceWindow sets (or, when ms <= 0, clears) the optional sequencer
+// deadline in milliseconds (1–60000) counted from the request's nonce.
+func (s *BatchOrdersService) SetNonceWindow(ms int64) *BatchOrdersService {
+	s.nonceWindow = &ms
+	return s
+}
+
 func (s *BatchOrdersService) Do(ctx context.Context) ([]json.RawMessage, error) {
 	data, err := json.Marshal(s.orders)
 	if err != nil {
@@ -339,8 +368,11 @@ func (s *BatchOrdersService) Do(ctx context.Context) ([]json.RawMessage, error) 
 	}
 	req := request.Post(s.c, ctx, "/fapi/v3/batchOrders", map[string]string{
 		"batchOrders": string(data),
-	}).WithSignature()
-	resp, err := request.Do[[]json.RawMessage](req)
+	})
+	if s.nonceWindow != nil {
+		req.WithNonceWindow(*s.nonceWindow)
+	}
+	resp, err := request.Do[[]json.RawMessage](req.WithSignature())
 	if err != nil {
 		return nil, err
 	}
@@ -371,8 +403,9 @@ type BatchModifyOrderItem struct {
 // response list keeps the request order. Each entry is either an Order or
 // {code,msg}; inspect the raw messages to handle partial failures.
 type ModifyMultipleOrdersService struct {
-	c      *FuturesClient
-	orders []BatchModifyOrderItem
+	c           *FuturesClient
+	orders      []BatchModifyOrderItem
+	nonceWindow *int64
 }
 
 func (c *FuturesClient) NewModifyMultipleOrdersService() *ModifyMultipleOrdersService {
@@ -384,6 +417,13 @@ func (s *ModifyMultipleOrdersService) SetOrders(orders []BatchModifyOrderItem) *
 	return s
 }
 
+// SetNonceWindow sets (or, when ms <= 0, clears) the optional sequencer
+// deadline in milliseconds (1–60000) counted from the request's nonce.
+func (s *ModifyMultipleOrdersService) SetNonceWindow(ms int64) *ModifyMultipleOrdersService {
+	s.nonceWindow = &ms
+	return s
+}
+
 func (s *ModifyMultipleOrdersService) Do(ctx context.Context) ([]json.RawMessage, error) {
 	data, err := json.Marshal(s.orders)
 	if err != nil {
@@ -391,8 +431,11 @@ func (s *ModifyMultipleOrdersService) Do(ctx context.Context) ([]json.RawMessage
 	}
 	req := request.Put(ctx, s.c, "/fapi/v3/batchOrders", map[string]string{
 		"batchOrders": string(data),
-	}).WithSignature()
-	resp, err := request.Do[[]json.RawMessage](req)
+	})
+	if s.nonceWindow != nil {
+		req.WithNonceWindow(*s.nonceWindow)
+	}
+	resp, err := request.Do[[]json.RawMessage](req.WithSignature())
 	if err != nil {
 		return nil, err
 	}
@@ -412,6 +455,13 @@ func (c *FuturesClient) NewFuturesSpotTransferService(asset string, amount decim
 		"clientTranId": clientTranID,
 		"kindType":     string(kind),
 	}}
+}
+
+// SetNonceWindow sets (or, when ms <= 0, clears) the optional sequencer
+// deadline in milliseconds (1–60000) counted from the request's nonce.
+func (s *FuturesSpotTransferService) SetNonceWindow(ms int64) *FuturesSpotTransferService {
+	setNonceWindow(s.params, ms)
+	return s
 }
 
 func (s *FuturesSpotTransferService) Do(ctx context.Context) (*TransferResponse, error) {
@@ -469,6 +519,13 @@ func (s *CancelOrderService) SetOrigClientOrderId(id string) *CancelOrderService
 	return s
 }
 
+// SetNonceWindow sets (or, when ms <= 0, clears) the optional sequencer
+// deadline in milliseconds (1–60000) counted from the request's nonce.
+func (s *CancelOrderService) SetNonceWindow(ms int64) *CancelOrderService {
+	setNonceWindow(s.params, ms)
+	return s
+}
+
 func (s *CancelOrderService) Do(ctx context.Context) (*Order, error) {
 	req := request.Delete(ctx, s.c, "/fapi/v3/order", s.params).WithSignature()
 	return request.Do[Order](req)
@@ -476,17 +533,28 @@ func (s *CancelOrderService) Do(ctx context.Context) (*Order, error) {
 
 // CancelAllOpenOrdersService -- DELETE /fapi/v3/allOpenOrders (TRADE)
 type CancelAllOpenOrdersService struct {
-	c      *FuturesClient
-	symbol string
+	c           *FuturesClient
+	symbol      string
+	nonceWindow *int64
 }
 
 func (c *FuturesClient) NewCancelAllOpenOrdersService(symbol string) *CancelAllOpenOrdersService {
 	return &CancelAllOpenOrdersService{c: c, symbol: symbol}
 }
 
+// SetNonceWindow sets (or, when ms <= 0, clears) the optional sequencer
+// deadline in milliseconds (1–60000) counted from the request's nonce.
+func (s *CancelAllOpenOrdersService) SetNonceWindow(ms int64) *CancelAllOpenOrdersService {
+	s.nonceWindow = &ms
+	return s
+}
+
 func (s *CancelAllOpenOrdersService) Do(ctx context.Context) (*GenericCodeMsg, error) {
-	req := request.Delete(ctx, s.c, "/fapi/v3/allOpenOrders", map[string]string{"symbol": s.symbol}).WithSignature()
-	return request.Do[GenericCodeMsg](req)
+	req := request.Delete(ctx, s.c, "/fapi/v3/allOpenOrders", map[string]string{"symbol": s.symbol})
+	if s.nonceWindow != nil {
+		req.WithNonceWindow(*s.nonceWindow)
+	}
+	return request.Do[GenericCodeMsg](req.WithSignature())
 }
 
 type GenericCodeMsg struct {
@@ -513,6 +581,13 @@ func (s *CancelMultipleOrdersService) SetOrderIdList(ids []int64) *CancelMultipl
 func (s *CancelMultipleOrdersService) SetOrigClientOrderIdList(ids []string) *CancelMultipleOrdersService {
 	data, _ := json.Marshal(ids)
 	s.params["origClientOrderIdList"] = string(data)
+	return s
+}
+
+// SetNonceWindow sets (or, when ms <= 0, clears) the optional sequencer
+// deadline in milliseconds (1–60000) counted from the request's nonce.
+func (s *CancelMultipleOrdersService) SetNonceWindow(ms int64) *CancelMultipleOrdersService {
+	setNonceWindow(s.params, ms)
 	return s
 }
 
@@ -552,6 +627,14 @@ func (s *GuardedCancelOrderService) SetOrigClientOrderId(id string) *GuardedCanc
 	return s
 }
 
+// SetNonceWindow sets (or, when ms <= 0, clears) the optional sequencer
+// deadline in milliseconds (1–60000), measured from the original order's nonce
+// rather than the time the cancel request is sent.
+func (s *GuardedCancelOrderService) SetNonceWindow(ms int64) *GuardedCancelOrderService {
+	setNonceWindow(s.params, ms)
+	return s
+}
+
 func (s *GuardedCancelOrderService) Do(ctx context.Context) (*Order, error) {
 	req := request.Delete(ctx, s.c, "/fapi/v3/guardedCancelOrder", s.params).WithSignatureNonce(s.nonce)
 	return request.Do[Order](req)
@@ -584,6 +667,14 @@ func (s *GuardedBatchOrdersService) SetOrigClientOrderIdList(ids []string) *Guar
 	return s
 }
 
+// SetNonceWindow sets (or, when ms <= 0, clears) the optional sequencer
+// deadline in milliseconds (1–60000), measured from the original batch order's
+// nonce rather than the time the cancel request is sent.
+func (s *GuardedBatchOrdersService) SetNonceWindow(ms int64) *GuardedBatchOrdersService {
+	setNonceWindow(s.params, ms)
+	return s
+}
+
 func (s *GuardedBatchOrdersService) Do(ctx context.Context) ([]json.RawMessage, error) {
 	req := request.Delete(ctx, s.c, "/fapi/v3/guardedBatchOrders", s.params).WithSignatureNonce(s.nonce)
 	resp, err := request.Do[[]json.RawMessage](req)
@@ -602,18 +693,29 @@ type CountdownCancelAllService struct {
 	c             *FuturesClient
 	symbol        string
 	countdownTime int64
+	nonceWindow   *int64
 }
 
 func (c *FuturesClient) NewCountdownCancelAllService(symbol string, countdownTimeMs int64) *CountdownCancelAllService {
 	return &CountdownCancelAllService{c: c, symbol: symbol, countdownTime: countdownTimeMs}
 }
 
+// SetNonceWindow sets (or, when ms <= 0, clears) the optional sequencer
+// deadline in milliseconds (1–60000) counted from the request's nonce.
+func (s *CountdownCancelAllService) SetNonceWindow(ms int64) *CountdownCancelAllService {
+	s.nonceWindow = &ms
+	return s
+}
+
 func (s *CountdownCancelAllService) Do(ctx context.Context) (*CountdownCancelAllResponse, error) {
 	req := request.Post(s.c, ctx, "/fapi/v3/countdownCancelAll", map[string]string{
 		"symbol":        s.symbol,
 		"countdownTime": strconv.FormatInt(s.countdownTime, 10),
-	}).WithSignature()
-	return request.Do[CountdownCancelAllResponse](req)
+	})
+	if s.nonceWindow != nil {
+		req.WithNonceWindow(*s.nonceWindow)
+	}
+	return request.Do[CountdownCancelAllResponse](req.WithSignature())
 }
 
 type CountdownCancelAllResponse struct {
@@ -714,4 +816,12 @@ func (s *GetAllOrdersService) Do(ctx context.Context) ([]Order, error) {
 		return nil, err
 	}
 	return *resp, nil
+}
+
+func setNonceWindow(params map[string]string, ms int64) {
+	if ms <= 0 {
+		params["nonceWindow"] = ""
+		return
+	}
+	params["nonceWindow"] = strconv.FormatInt(ms, 10)
 }

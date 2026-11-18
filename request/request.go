@@ -34,6 +34,7 @@ type Client interface {
 	GetChainID() int64
 	NextNonce() int64
 	GetRecvWindow() int64
+	GetNonceWindow() int64
 	GetLogger() log.Logger
 	GetSignFn() SignFn
 	GetTimeOffsetMs() int64
@@ -48,12 +49,13 @@ type kv struct {
 }
 
 type Request struct {
-	client Client
-	r      *resty.Request
-	method string
-	path   string
-	params []kv
-	err    error
+	client              Client
+	r                   *resty.Request
+	method              string
+	path                string
+	params              []kv
+	suppressNonceWindow bool
+	err                 error
 }
 
 func newRequest(ctx context.Context, c Client, method, path string, params ...map[string]string) *Request {
@@ -63,16 +65,22 @@ func newRequest(ctx context.Context, c Client, method, path string, params ...ma
 			merged[k] = v
 		}
 	}
+	var suppressNonceWindow bool
+	if v, ok := merged["nonceWindow"]; ok && v == "" {
+		suppressNonceWindow = true
+		delete(merged, "nonceWindow")
+	}
 	r := c.GetHttpClient().R().
 		SetHeader("User-Agent", common.GO_ASTER_USER_AGENT).
 		SetContext(ctx)
 	r.Method = method
 	return &Request{
-		client: c,
-		r:      r,
-		method: method,
-		path:   path,
-		params: orderedKVs(merged),
+		client:              c,
+		r:                   r,
+		method:              method,
+		path:                path,
+		params:              orderedKVs(merged),
+		suppressNonceWindow: suppressNonceWindow,
 	}
 }
 
@@ -92,11 +100,45 @@ func Delete(ctx context.Context, c Client, path string, params ...map[string]str
 	return newRequest(ctx, c, http.MethodDelete, path, params...)
 }
 
+// WithNonceWindow sets (or, when ms <= 0, suppresses) the optional sequencer
+// deadline parameter (1–60000 ms) on this request. Call it before
+// WithSignature or WithSignatureNonce so the parameter is covered by the
+// EIP-712 signature.
+func (r *Request) WithNonceWindow(ms int64) *Request {
+	if r.err != nil {
+		return r
+	}
+	filtered := r.params[:0]
+	for _, p := range r.params {
+		if p.Key != "nonceWindow" {
+			filtered = append(filtered, p)
+		}
+	}
+	r.params = filtered
+	if ms <= 0 {
+		r.suppressNonceWindow = true
+		return r
+	}
+	r.suppressNonceWindow = false
+	r.params = append(r.params, kv{Key: "nonceWindow", Value: strconv.FormatInt(ms, 10)})
+	return r
+}
+
+func (r *Request) hasParam(key string) bool {
+	for _, p := range r.params {
+		if p.Key == key {
+			return true
+		}
+	}
+	return false
+}
+
 // WithSignature attaches the V3 EIP-712 signature to the request. Endpoints
 // requiring TRADE / USER_DATA / USER_STREAM auth should chain this in their
 // Do(ctx). The flow is:
 //
-//  1. Append nonce (microseconds, monotonic) and signer (API wallet address).
+//  1. Append nonceWindow (if configured), user, nonce (microseconds, monotonic)
+//     and signer (API wallet address).
 //  2. URL-encode the ordered params list -> msg.
 //  3. Run msg through EIP-712 (primaryType=Message, single string field "msg").
 //  4. Append the resulting signature.
@@ -112,6 +154,11 @@ func (r *Request) WithSignature() *Request {
 		r.err = err
 		return r
 	}
+	if !r.suppressNonceWindow && !r.hasParam("nonceWindow") {
+		if nw := r.client.GetNonceWindow(); nw > 0 {
+			r.params = append(r.params, kv{Key: "nonceWindow", Value: strconv.FormatInt(nw, 10)})
+		}
+	}
 	return r.signWithNonce(r.client.NextNonce())
 }
 
@@ -119,7 +166,10 @@ func (r *Request) WithSignature() *Request {
 // nonce instead of a fresh monotonic one. The guarded cancel endpoints
 // (guardedCancelOrder / guardedBatchOrders) require this: their nonce must
 // replay the exact value submitted when the order was placed, which the engine
-// uses to guard against duplicate or out-of-order cancellations.
+// uses to guard against duplicate or out-of-order cancellations. Because
+// nonceWindow on a guarded cancel is measured from that original order's nonce
+// rather than the cancel time, the client-wide GetNonceWindow default is not
+// applied automatically here; set it explicitly on the request if needed.
 func (r *Request) WithSignatureNonce(nonce int64) *Request {
 	if r.err != nil {
 		return r

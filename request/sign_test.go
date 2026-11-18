@@ -1,10 +1,13 @@
 package request
 
 import (
+	"context"
 	"encoding/hex"
+	"net/url"
 	"strings"
 	"testing"
 
+	"github.com/UnipayFI/go-aster/v3/client"
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
@@ -112,5 +115,86 @@ func TestDifferentChainIDProducesDifferentSignature(t *testing.T) {
 	}
 	if mainnet == testnet {
 		t.Fatalf("mainnet and testnet signatures are identical: %s", mainnet)
+	}
+}
+
+// TestNonceWindowSigning checks client-level and per-request nonceWindow
+// handling, including suppression, guarded-cancel isolation, and EIP-712
+// coverage of nonceWindow in the signed message.
+func TestNonceWindowSigning(t *testing.T) {
+	const userAddr = "0x63DD5aCC6b1aa0f563956C0e534DD30B6dcF7C4e"
+	ctx := context.Background()
+
+	assertValidSig := func(t *testing.T, rawURL string) url.Values {
+		t.Helper()
+		rawQuery := strings.SplitN(rawURL, "?", 2)[1]
+		idx := strings.LastIndex(rawQuery, "&signature=")
+		if idx < 0 {
+			t.Fatalf("missing trailing signature in %q", rawQuery)
+		}
+		unsignedMsg := rawQuery[:idx]
+		sigHex := rawQuery[idx+len("&signature="):]
+		sig, err := hex.DecodeString(sigHex)
+		if err != nil || len(sig) != 65 {
+			t.Fatalf("decode signature %q: %v", sigHex, err)
+		}
+		sig[64] -= 27
+		pub, err := crypto.SigToPub(EIP712Digest(unsignedMsg, 1666), sig)
+		if err != nil {
+			t.Fatalf("ecrecover(%q): %v", unsignedMsg, err)
+		}
+		if got := crypto.PubkeyToAddress(*pub).Hex(); !strings.EqualFold(got, testSignerAddress) {
+			t.Fatalf("recovered signer = %s, want %s", got, testSignerAddress)
+		}
+		q, err := url.ParseQuery(rawQuery)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return q
+	}
+
+	// Default client omits nonceWindow.
+	plain := client.NewClient(client.ProductFutures, client.WithAuth(userAddr, testPrivateKeyHex))
+	q := assertValidSig(t, Post(plain, ctx, "/fapi/v3/order", map[string]string{"symbol": "BTCUSDT"}).WithSignature().fullURL())
+	if q.Has("nonceWindow") {
+		t.Errorf("default client sent nonceWindow = %v", q["nonceWindow"])
+	}
+
+	// Client-wide WithNonceWindow applies to WithSignature, can be overridden or
+	// cleared per request, and does not leak onto guarded cancels.
+	withDefault := client.NewClient(client.ProductFutures, client.WithAuth(userAddr, testPrivateKeyHex), client.WithNonceWindow(5000))
+	q = assertValidSig(t, Post(withDefault, ctx, "/fapi/v3/order", map[string]string{"symbol": "BTCUSDT"}).WithSignature().fullURL())
+	if got := q["nonceWindow"]; len(got) != 1 || got[0] != "5000" {
+		t.Errorf("client default nonceWindow = %v, want [5000]", got)
+	}
+
+	q = assertValidSig(t, Post(withDefault, ctx, "/fapi/v3/order", map[string]string{"symbol": "BTCUSDT", "nonceWindow": "1200"}).WithSignature().fullURL())
+	if got := q["nonceWindow"]; len(got) != 1 || got[0] != "1200" {
+		t.Errorf("per-param override nonceWindow = %v, want [1200]", got)
+	}
+
+	q = assertValidSig(t, Post(withDefault, ctx, "/fapi/v3/order", map[string]string{"symbol": "BTCUSDT"}).WithNonceWindow(800).WithSignature().fullURL())
+	if got := q["nonceWindow"]; len(got) != 1 || got[0] != "800" {
+		t.Errorf("WithNonceWindow override = %v, want [800]", got)
+	}
+
+	q = assertValidSig(t, Post(withDefault, ctx, "/fapi/v3/order", map[string]string{"symbol": "BTCUSDT", "nonceWindow": ""}).WithSignature().fullURL())
+	if q.Has("nonceWindow") {
+		t.Errorf("suppressed param sent nonceWindow = %v", q["nonceWindow"])
+	}
+
+	q = assertValidSig(t, Post(withDefault, ctx, "/fapi/v3/order", map[string]string{"symbol": "BTCUSDT"}).WithNonceWindow(0).WithSignature().fullURL())
+	if q.Has("nonceWindow") {
+		t.Errorf("WithNonceWindow(0) sent nonceWindow = %v", q["nonceWindow"])
+	}
+
+	q = assertValidSig(t, Delete(ctx, withDefault, "/fapi/v3/guardedCancelOrder", map[string]string{"symbol": "BTCUSDT", "orderId": "1"}).WithSignatureNonce(1748310859508867).fullURL())
+	if q.Has("nonceWindow") {
+		t.Errorf("guarded cancel inherited client nonceWindow = %v", q["nonceWindow"])
+	}
+
+	q = assertValidSig(t, Delete(ctx, withDefault, "/fapi/v3/guardedCancelOrder", map[string]string{"symbol": "BTCUSDT", "orderId": "1", "nonceWindow": "10000"}).WithSignatureNonce(1748310859508867).fullURL())
+	if got := q["nonceWindow"]; len(got) != 1 || got[0] != "10000" {
+		t.Errorf("explicit guarded cancel nonceWindow = %v, want [10000]", got)
 	}
 }

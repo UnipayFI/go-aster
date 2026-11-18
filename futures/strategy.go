@@ -63,6 +63,7 @@ type PlaceStrategyOrderService struct {
 	builder          string
 	feeRate          string
 	subOrders        []StrategySubOrder
+	nonceWindow      *int64
 }
 
 func (c *FuturesClient) NewPlaceStrategyOrderService(strategyType StrategyType, subOrders []StrategySubOrder) *PlaceStrategyOrderService {
@@ -86,6 +87,13 @@ func (s *PlaceStrategyOrderService) SetFeeRate(r decimal.Decimal) *PlaceStrategy
 	return s
 }
 
+// SetNonceWindow sets (or, when ms <= 0, clears) the optional sequencer
+// deadline in milliseconds (1–60000) counted from the request's nonce.
+func (s *PlaceStrategyOrderService) SetNonceWindow(ms int64) *PlaceStrategyOrderService {
+	s.nonceWindow = &ms
+	return s
+}
+
 func (s *PlaceStrategyOrderService) Do(ctx context.Context) (*StrategyOrderResult, error) {
 	data, err := json.Marshal(s.subOrders)
 	if err != nil {
@@ -104,8 +112,11 @@ func (s *PlaceStrategyOrderService) Do(ctx context.Context) (*StrategyOrderResul
 	if s.feeRate != "" {
 		params["feeRate"] = s.feeRate
 	}
-	req := request.Post(s.c, ctx, "/fapi/v3/placeStrategyOrder", params).WithSignature()
-	return request.Do[StrategyOrderResult](req)
+	req := request.Post(s.c, ctx, "/fapi/v3/placeStrategyOrder", params)
+	if s.nonceWindow != nil {
+		req.WithNonceWindow(*s.nonceWindow)
+	}
+	return request.Do[StrategyOrderResult](req.WithSignature())
 }
 
 // StrategyOrderResult is the placeStrategyOrder response.
@@ -128,10 +139,18 @@ type UpdateStrategyOrderService struct {
 	strategyId   int64
 	strategyType StrategyType
 	subOrders    []StrategySubOrder
+	nonceWindow  *int64
 }
 
 func (c *FuturesClient) NewUpdateStrategyOrderService(strategyId int64, strategyType StrategyType, subOrders []StrategySubOrder) *UpdateStrategyOrderService {
 	return &UpdateStrategyOrderService{c: c, strategyId: strategyId, strategyType: strategyType, subOrders: subOrders}
+}
+
+// SetNonceWindow sets (or, when ms <= 0, clears) the optional sequencer
+// deadline in milliseconds (1–60000) counted from the request's nonce.
+func (s *UpdateStrategyOrderService) SetNonceWindow(ms int64) *UpdateStrategyOrderService {
+	s.nonceWindow = &ms
+	return s
 }
 
 func (s *UpdateStrategyOrderService) Do(ctx context.Context) ([]StrategyUpdateResult, error) {
@@ -143,8 +162,11 @@ func (s *UpdateStrategyOrderService) Do(ctx context.Context) ([]StrategyUpdateRe
 		"strategyId":   strconv.FormatInt(s.strategyId, 10),
 		"strategyType": string(s.strategyType),
 		"subOrderList": string(data),
-	}).WithSignature()
-	resp, err := request.Do[[]StrategyUpdateResult](req)
+	})
+	if s.nonceWindow != nil {
+		req.WithNonceWindow(*s.nonceWindow)
+	}
+	resp, err := request.Do[[]StrategyUpdateResult](req.WithSignature())
 	if err != nil {
 		return nil, err
 	}
