@@ -10,7 +10,7 @@ Go SDK for the [Aster DEX](https://www.asterdex.com) **V3** API (Spot + Futures,
 
 | API                                                        | Aligned to                                                                             |
 | ---------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| Spot + Futures + Aster-Chain V3 REST + WebSocket (public / private) | [2026-10-27](https://asterdex.github.io/aster-api-website/changelog/upcoming-changes/) |
+| Spot + Futures + Aster-Chain V3 REST + WebSocket (public / private) | [2026-11-09](https://github.com/asterdex/api-docs/blob/master/CHANGELOG.md) |
 
 ---
 
@@ -18,7 +18,7 @@ Go SDK for the [Aster DEX](https://www.asterdex.com) **V3** API (Spot + Futures,
 
 - ✅ **Spot REST**: 30 endpoints — market data, orders, account, transfers, withdrawals, Spot Builder (Aster Code)
 - ✅ **Futures REST**: ~70 endpoints — market, trading (incl. chase, strategy, batch-modify & guarded-cancel orders), position, account, referral, asset exchange, STP, MMP, sub-accounts, asset migration, agent registration & approval, builder user queries, announcements
-- ✅ **Aster-Chain REST**: 10 endpoints — deposit addresses, EVM & Solana withdrawals, spot/perp wallet transfers, withdrawal limits & fee estimates
+- ✅ **Aster-Chain REST**: 12 endpoints — deposit addresses, EVM & Solana withdrawals, spot/perp wallet transfers, batch transfers, withdrawal limits & fee estimates
 - ✅ **WebSocket Streaming**: full Spot & Futures market streams plus user data streams
 - ✅ **Sub-account Flows**: bind / create / update / transfer with master + child signature inputs
 - ✅ **Flexible Signer**: pluggable `SignFn` for HSM, TEE, or remote signing
@@ -101,6 +101,7 @@ client.WithNetwork(common.Network)      // common.Mainnet (default) / common.Tes
 client.WithBaseURL(string)              // override the network's REST base URL (chainId still follows WithNetwork)
 client.WithLogger(log.Logger)           // slog-compatible interface
 client.WithSignRequestFn(client.SignFn) // custom signer (HSM / TEE / remote)
+client.WithNonceWindow(int64)           // ms (1–60000); optional sequencer deadline
 client.WithRecvWindow(int64)
 client.WithTimeOffset(int64)            // ms; aligns nonce with server clock
 ```
@@ -264,11 +265,11 @@ Go 1.27 only honours `format` tags when the experimental `ExperimentalSupportFor
 </details>
 
 <details>
-<summary><b>Aster-Chain REST (10)</b></summary>
+<summary><b>Aster-Chain REST (12)</b></summary>
 
 - **Deposit**: `GetSpotDepositAddress`
 - **Withdraw**: `PerpWithdraw`, `PerpSolanaWithdraw`, `SpotWithdraw`, `SpotSolanaWithdraw`, `GetPerpWithdrawInfo`, `GetDepositWithdrawHistory`, `EstimateWithdrawFee`
-- **Transfer**: `PerpWalletTransfer`, `SpotWalletTransfer`
+- **Transfer**: `PerpWalletTransfer`, `SpotWalletTransfer`, `BatchTransfer`, `GetBatchTransferHistory`
 
 </details>
 
